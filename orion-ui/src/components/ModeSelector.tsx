@@ -35,7 +35,7 @@ export default function ModeSelector() {
   }, []);
 
   return (
-    <div className="mode-selector-container" ref={dropdownRef} style={{ position: 'relative', margin: '0 24px 24px 24px' }}>
+    <div className="mode-selector-container" ref={dropdownRef} >
       <button 
         className="mode-selector-button"
         onClick={() => setIsOpen(!isOpen)}
@@ -121,3 +121,4 @@ export default function ModeSelector() {
     </div>
   );
 }
+

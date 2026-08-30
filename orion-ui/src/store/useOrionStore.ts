@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { OrionModeId } from '../config/modes';
+import { Plan, PlanItem, PlanStatus } from '../domain/planning/types';
+import { validatePlanItems } from '../domain/planning/validation';
 
 export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Overdue';
 export type TaskPriority = 'Critical' | 'High' | 'Medium' | 'Low';
@@ -170,6 +172,12 @@ export interface OrionState {
   addFlashcardDeck: (deck: Omit<FlashcardDeck, 'id'>) => void;
   addFlashcard: (card: Omit<Flashcard, 'id' | 'nextReviewDate' | 'interval' | 'easeFactor'>) => void;
   updateFlashcardReview: (id: string, quality: number) => void;
+
+  // Planning
+  plans: Plan[];
+  addPlan: (items: Omit<PlanItem, 'id'>[]) => void;
+  updatePlanStatus: (id: string, status: PlanStatus) => void;
+  removePlan: (id: string) => void;
 }
 
 const ACCENT_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#14b8a6", "#f59e0b", "#f43f5e"];
@@ -455,6 +463,29 @@ export const useOrionStore = create<OrionState>()(
 
       deleteDocument: (id) => set((state) => ({
         documents: state.documents.filter(d => d.id !== id)
+      })),
+
+      // Planning state and mutations
+      plans: [],
+
+      addPlan: (items) => set((state) => {
+        validatePlanItems(items, state.tasks);
+        const now = new Date().toISOString();
+        const newPlan = {
+          id: uuidv4(),
+          items: items.map(item => ({ ...item, id: uuidv4() })),
+          status: 'proposed' as const,
+          createdAt: now,
+        };
+        return { plans: [...state.plans, newPlan] };
+      }),
+
+      updatePlanStatus: (id, status) => set((state) => ({
+        plans: state.plans.map(p => p.id === id ? { ...p, status } : p)
+      })),
+
+      removePlan: (id) => set((state) => ({
+        plans: state.plans.filter(p => p.id !== id)
       })),
 
     }),

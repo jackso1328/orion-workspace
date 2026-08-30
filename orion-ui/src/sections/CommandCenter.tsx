@@ -7,6 +7,8 @@ type Message = { role: "user" | "orion"; text: string };
 const API_BASE = "http://localhost:8000/api";
 
 import { Calendar, FileText, Target, Lightbulb, Send, Mic } from "lucide-react";
+import { useOrionStore } from "../store/useOrionStore";
+import { validateAIProposal } from "../domain/planning/planner";
 
 const SUGGESTIONS = [
   { text: "Organize my day", icon: <Calendar size={16} /> },
@@ -130,8 +132,20 @@ export default function CommandCenter() {
       });
       if (!thinkRes.ok) throw new Error("Think request failed");
 
-      const { reply } = await thinkRes.json();
-      setMessages((prev) => [...prev, { role: "orion", text: reply }]);
+      const { reply, proposal } = await thinkRes.json();
+            setMessages((prev) => [...prev, { role: "orion", text: reply }]);
+
+      if (proposal) {
+        try {
+          const tasks = useOrionStore.getState().tasks;
+          const validatedItems = validateAIProposal(proposal, tasks);
+          useOrionStore.getState().addPlan(validatedItems);
+          setMessages((prev) => [...prev, { role: "orion", text: "I have prepared a new planning proposal for you. Please check the Study Planner to review it." }]);
+        } catch (e) {
+          console.error("AI returned invalid plan proposal", e);
+          setMessages((prev) => [...prev, { role: "orion", text: "I tried to create a plan, but there was an internal error with the schedule generation. Please ensure you have secure credential infrastructure installed." }]);
+        }
+      }
 
       if (speakResponse) {
         setStatus("speaking");
@@ -281,3 +295,5 @@ export default function CommandCenter() {
     </section>
   );
 }
+
+

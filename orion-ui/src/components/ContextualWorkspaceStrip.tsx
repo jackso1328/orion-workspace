@@ -36,7 +36,7 @@ export default function ContextualWorkspaceStrip({ modules, theme }: Props) {
   if (!modules || modules.length === 0) return null;
 
   return (
-    <div className={`workspace-strip theme-${theme}`} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
+    <div className={`workspace-strip theme-${theme}`} >
       {modules.map(moduleId => {
         const data = getModuleData(moduleId);
         if (!data) return null;
@@ -82,14 +82,15 @@ export default function ContextualWorkspaceStrip({ modules, theme }: Props) {
 
         if (data.route) {
           return (
-            <Link key={moduleId} to={data.route} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flex: '1 1 auto', minWidth: '160px' }}>
+            <Link key={moduleId} to={data.route} style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}>
               {content}
             </Link>
           );
         }
 
-        return <div key={moduleId} style={{ display: 'flex', flex: '1 1 auto', minWidth: '160px' }}>{content}</div>;
+        return <div key={moduleId} style={{ display: 'flex' }}>{content}</div>;
       })}
     </div>
   );
 }
+

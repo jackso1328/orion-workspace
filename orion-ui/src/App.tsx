@@ -6,6 +6,7 @@ import OrionModule from "./components/OrionModule";
 import CalendarModule from "./components/CalendarModule";
 import StudyPlanner from "./components/StudyPlanner";
 import NotesModule from "./components/NotesModule";
+import DocumentsModule from "./components/DocumentsModule";
 import PomodoroModule from "./components/PomodoroModule";
 import CourseManagement from "./components/CourseManagement";
 import AssignmentsModule from "./components/AssignmentsModule";
@@ -47,10 +48,10 @@ function App() {
 
         {/* KNOWLEDGE */}
         <Route path="notes" element={<NotesModule />} />
-        <Route path="documents" element={<Placeholder title="Document Reader" />} />
+        <Route path="documents" element={<DocumentsModule />} />
         <Route path="whiteboard" element={<Placeholder title="Digital Whiteboard" />} />
         <Route path="flashcards" element={<FlashcardsModule />} />
-        <Route path="spacedrep" element={<Placeholder title="Spaced-Repetition System" />} />
+        <Route path="spacedrep" element={<Navigate to="/flashcards" replace />} />
         <Route path="library" element={<Placeholder title="Resource Library" />} />
 
         {/* RESEARCH & DEV */}
@@ -65,3 +66,4 @@ function App() {
   );
 }
 export default App;
+

@@ -3075,3 +3075,144 @@ body {
 .orion-eyes-overlay.eye-glance-up { transform: translateY(-8px) !important; transition: transform 0.4s ease-out !important; }
 .orion-eyes-overlay.eye-look-away { transform: translate(-14px, 6px) !important; transition: transform 0.8s ease-out !important; }
 .orion-eyes-overlay.eye-micro-dart { transform: translate(4px, -3px) !important; transition: transform 0.1s !important; }
+
+/* ============================================================
+   RESPONSIVE FOUNDATION (Task 08A & 08B)
+   ============================================================ */
+.workspace-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 1200px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .modal-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE FOUNDATION (Task 08C - Sidebar Rail)
+   ============================================================ */
+.sidebar-scroll-area {
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+/* Mode Selector Classes */
+.mode-selector-container {
+  position: relative;
+  margin: 0 12px 24px 12px;
+}
+.mode-selector-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  cursor: pointer;
+  color: #333;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+.mode-selector-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+}
+.mode-selector-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: #444;
+  font-weight: 500;
+  transition: background 0.2s ease;
+  width: 100%;
+}
+.mode-selector-option:hover {
+  background: rgba(0,0,0,0.05);
+}
+.mode-selector-option.active {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  font-weight: 600;
+}
+.mode-selector-option.active:hover {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+@media (max-width: 800px) {
+  .app-sidebar {
+    width: 70px;
+    padding: 24px 8px;
+    transition: width 0.3s ease, padding 0.3s ease;
+  }
+  .sidebar-brand {
+    margin-bottom: 24px;
+    padding: 0;
+    justify-content: center;
+    display: flex;
+  }
+  .sidebar-brand h3, .sidebar-brand .brand-subtitle {
+    display: none;
+  }
+  .mode-selector-container {
+    margin: 0 4px 24px 4px;
+  }
+  .mode-selector-button {
+    padding: 12px;
+    justify-content: center;
+  }
+  .mode-selector-button span, .mode-selector-button .lucide-chevron-down {
+    display: none;
+  }
+  .mode-selector-dropdown {
+    width: 300px;
+    left: calc(100% + 16px);
+    right: auto;
+  }
+  .sidebar-label {
+    display: none;
+  }
+  .nav-item {
+    padding: 12px;
+    justify-content: center;
+  }
+  .nav-item span {
+    display: none;
+  }
+}

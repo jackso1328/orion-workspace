@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { format, parseISO, isSameDay, setHours, setMinutes, addMinutes, startOfDay } from "date-fns";
-import { Clock, GripVertical, CheckCircle2, Plus } from "lucide-react";
+import { Clock, GripVertical, CheckCircle2, Plus, CalendarClock, Sparkles } from "lucide-react";
+import PlanReviewModal from "./PlanReviewModal";
 import { useOrionStore } from "../store/useOrionStore";
+import { Plan } from "../domain/planning/types";
 import { useNavigate } from "react-router-dom";
 
 export default function StudyPlanner() {
   const navigate = useNavigate();
   const [currentDate] = useState(new Date());
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskDuration, setNewTaskDuration] = useState("60");
+    const [newTaskDuration, setNewTaskDuration] = useState("60");
+  const [reviewingPlan, setReviewingPlan] = useState<Plan | null>(null);
+  
+  const plans = useOrionStore(state => state.plans);
   
   const tasks = useOrionStore(state => state.tasks);
   const updateTask = useOrionStore(state => state.updateTask);
@@ -108,10 +113,13 @@ export default function StudyPlanner() {
                   <div className="time-label">{displayHour12} {ampm}</div>
                   <div className="time-slot">
                     <div className="slot-divider"></div>
-                  </div>
-                </div>
-              );
-            })}
+                      </div>
+      {reviewingPlan && (
+        <PlanReviewModal plan={reviewingPlan} onClose={() => setReviewingPlan(null)} />
+      )}
+    </div>
+  );
+})}
 
             {/* Render Scheduled Tasks as Absolutely Positioned Blocks */}
             {scheduledTasks.map(task => {
@@ -145,15 +153,49 @@ export default function StudyPlanner() {
                     <button className="focus-btn" onClick={() => navigate(`/pomodoro?taskId=${task.id}`)}>
                       <Clock size={12} /> Focus
                     </button>
-                  </div>
-                </div>
-              );
-            })}
+                      </div>
+      {reviewingPlan && (
+        <PlanReviewModal plan={reviewingPlan} onClose={() => setReviewingPlan(null)} />
+      )}
+    </div>
+  );
+})}
           </div>
         </div>
 
-        {/* Unscheduled Sidebar */}
+                {/* Unscheduled Sidebar */}
         <div className="unscheduled-sidebar">
+          {plans.length > 0 && (
+            <div className="planning-review-section" style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '12px' }}>
+                <Sparkles size={18} color="var(--accent-purple)" />
+                <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Proposed Plans</h3>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {plans.map(plan => (
+                  <div key={plan.id} style={{ padding: '12px', borderRadius: '8px', border: `1px solid ${plan.status === 'proposed' ? 'var(--accent-purple)' : 'var(--border-card)'}`, background: plan.status === 'proposed' ? 'rgba(139, 92, 246, 0.05)' : 'var(--bg-card)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Generated {format(parseISO(plan.createdAt), "MMM d")}</span>
+                      {plan.status === 'proposed' && <span style={{ fontSize: '0.7rem', fontWeight: 600, background: 'var(--accent-purple)', color: 'white', padding: '2px 6px', borderRadius: '4px' }}>PROPOSED</span>}
+                      {plan.status === 'accepted' && <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#10b981', color: 'white', padding: '2px 6px', borderRadius: '4px' }}>ACCEPTED</span>}
+                      {plan.status === 'rejected' && <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#ef4444', color: 'white', padding: '2px 6px', borderRadius: '4px' }}>REJECTED</span>}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                      {plan.items.length} scheduled task{plan.items.length !== 1 ? 's' : ''}
+                    </div>
+                    <button 
+                      onClick={() => setReviewingPlan(plan)}
+                      style={{ marginTop: '4px', padding: '6px', width: '100%', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'white', color: 'var(--accent-purple)', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                    >
+                      <CalendarClock size={14} /> Review Plan
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <h3>Unscheduled ({unscheduledTasks.length})</h3>
           <p className="helper-text">Create tasks and drag them into the timeline to time-block your day.</p>
           
@@ -203,7 +245,12 @@ export default function StudyPlanner() {
           </div>
         </div>
 
-      </div>
+          </div>
+      {reviewingPlan && (
+        <PlanReviewModal plan={reviewingPlan} onClose={() => setReviewingPlan(null)} />
+      )}
     </div>
   );
 }
+
+
