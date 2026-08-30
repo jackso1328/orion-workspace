@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import Sidebar from "./components/Sidebar";
-import GlobalSearch from "./components/GlobalSearch";
+import CommandPalette from "./components/CommandPalette";
 
 export default function AppShell() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export default function AppShell() {
   return (
     <div className="dashboard-layout">
       <Sidebar />
-      <GlobalSearch />
+      <CommandPalette />
       <main className="pane-workspace">
         <Outlet />
       </main>

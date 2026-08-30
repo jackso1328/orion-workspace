@@ -1,8 +1,56 @@
-import { isSameDay, parseISO, addMinutes } from "date-fns";
+import { isSameDay, parseISO, addMinutes, startOfDay, addDays, isAfter, isBefore } from "date-fns";
 import { Task, Exam, Assignment } from "../../store/useOrionStore";
 import { TodayContext, TodayScheduleState, TimelineItem, AllDayItem } from "./types";
+import { InboxItem } from "../inbox/types";
 
 const PRIORITY_WEIGHT: Record<string, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+
+
+
+export function getOverdueTasks(tasks: Task[], currentTime: Date): Task[] {
+  const startOfCurrentDay = startOfDay(currentTime);
+  return tasks.filter(t => t.status !== "Completed" && t.dueDate && parseISO(t.dueDate) < startOfCurrentDay);
+}
+
+export function getUpcomingDeadlines(tasks: Task[], exams: Exam[], assignments: Assignment[], currentTime: Date): Array<TimelineItem | AllDayItem> {
+  const upcomingItems: Array<TimelineItem | AllDayItem> = [];
+  const next3Days = addDays(startOfDay(currentTime), 4); // Up to end of day 3
+  const startOfCurrentDay = startOfDay(currentTime);
+
+  tasks.forEach(t => {
+    if (t.status !== "Completed" && t.dueDate) {
+      const due = parseISO(t.dueDate);
+      if (isAfter(due, startOfCurrentDay) && isBefore(due, next3Days) && !isSameDay(due, currentTime)) {
+        upcomingItems.push({ id: t.id, type: 'task', title: t.title });
+      }
+    }
+  });
+
+  exams.forEach(e => {
+    if (e.date) {
+      const date = parseISO(e.date);
+      if (isAfter(date, startOfCurrentDay) && isBefore(date, next3Days) && !isSameDay(date, currentTime)) {
+        upcomingItems.push({ id: e.id, type: 'exam', title: e.title, start: date, end: addMinutes(date, e.durationMinutes || 60) });
+      }
+    }
+  });
+
+  assignments.forEach(a => {
+    if (a.status !== "Submitted" && a.status !== "Graded" && a.dueDate) {
+      const due = parseISO(a.dueDate);
+      if (isAfter(due, startOfCurrentDay) && isBefore(due, next3Days) && !isSameDay(due, currentTime)) {
+        upcomingItems.push({ id: a.id, type: 'assignment', title: a.title });
+      }
+    }
+  });
+
+  return upcomingItems;
+}
+
+export function getInboxAttention(inbox: InboxItem[], currentTime: Date): InboxItem[] {
+  const yesterday = addDays(currentTime, -1);
+  return inbox.filter(i => !i.processedAt && parseISO(i.createdAt) < yesterday);
+}
 
 export function getTodayTasks(tasks: Task[], currentTime: Date): Task[] {
   return tasks.filter(t => t.status !== "Completed" && t.dueDate && isSameDay(parseISO(t.dueDate), currentTime));
@@ -95,6 +143,9 @@ export function getTodaySchedule(context: TodayContext): TodayScheduleState {
   const todayCompleted = getCompletedTodayTasks(context.tasks, context.currentTime);
   const todayExams = getTodayExams(context.exams, context.currentTime);
   const todayAssignments = getTodayAssignments(context.assignments, context.currentTime);
+  const overdueTasks = getOverdueTasks(context.tasks, context.currentTime);
+  const upcomingDeadlines = getUpcomingDeadlines(context.tasks, context.exams, context.assignments, context.currentTime);
+  const inboxAttention = getInboxAttention(context.inbox, context.currentTime);
   
   const priorities = getPriorities(todayTasks);
   const timelineItems = getTimelineItems(todayTasks, todayExams);
@@ -112,6 +163,9 @@ export function getTodaySchedule(context: TodayContext): TodayScheduleState {
     nowItem,
     nextItem,
     timelineItems,
-    allDayItems
-  };
+    allDayItems,
+    overdueTasks,
+    upcomingDeadlines,
+    inboxAttention
+}
 }

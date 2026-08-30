@@ -9,6 +9,7 @@ const todayISO = "2026-08-30T12:00:00.000Z";
 const pastISO = "2026-08-29T12:00:00.000Z";
 const futureISO = "2026-08-31T12:00:00.000Z";
 
+
 const mockTasks: Task[] = [
   // 1. Task due today (unscheduled)
   { id: "t1", title: "Task 1", status: "Pending", priority: "Low", dueDate: todayISO, documentIds: [], createdAt: pastISO, color: "red" },
@@ -18,9 +19,18 @@ const mockTasks: Task[] = [
   { id: "t3", title: "Task 3", status: "In Progress", priority: "Critical", dueDate: todayISO, startTime: "2026-08-30T11:30:00.000Z", endTime: "2026-08-30T12:30:00.000Z", documentIds: [], createdAt: pastISO, color: "green" },
   // 4. Task completed today
   { id: "t4", title: "Task 4", status: "Completed", priority: "Medium", dueDate: todayISO, completedAt: todayISO, documentIds: [], createdAt: pastISO, color: "pink" },
-  // 5. Task due tomorrow
+  // 5. Task due tomorrow (Upcoming)
   { id: "t5", title: "Task 5", status: "Pending", priority: "Medium", dueDate: futureISO, documentIds: [], createdAt: pastISO, color: "pink" },
+  // 6. Overdue Task
+  { id: "t6", title: "Overdue Task", status: "Pending", priority: "Critical", dueDate: pastISO, documentIds: [], createdAt: pastISO, color: "red" }
 ];
+
+const mockInbox = [
+  { id: "i1", content: "Stale item", createdAt: "2026-08-28T12:00:00.000Z" },
+  { id: "i2", content: "Recent item", createdAt: todayISO },
+  { id: "i3", content: "Processed item", createdAt: pastISO, processedAt: todayISO }
+];
+
 
 const mockExams: Exam[] = [
   // 1. Exam upcoming today
@@ -39,6 +49,7 @@ function runTests() {
     tasks: mockTasks,
     exams: mockExams,
     assignments: mockAssignments,
+    inbox: mockInbox as any,
     currentTime
   });
 
@@ -79,7 +90,23 @@ function runTests() {
   // Test: NEXT Item (since NOW exists, NEXT is null in the original logic fallback... wait, no. NEXT is null if NOW exists in current code? 
   // Let us re-read Workspace logic: `if (!currentNow && prioritiesList.length > 0) { currentNext = prioritiesList[0]; }` 
   // Yes! If NOW exists, NEXT is null!)
+  
   assert.strictEqual(schedule.nextItem, null, "NEXT item should be null if NOW is populated");
+
+  // Test: Overdue Tasks
+  assert.strictEqual(schedule.overdueTasks.length, 1, "Should find 1 overdue task");
+  assert.strictEqual(schedule.overdueTasks[0].id, "t6");
+
+  // Test: Upcoming Deadlines (t5 due tomorrow, e1 today (so NOT upcoming, it is today!), a1 today (NOT upcoming))
+  // Wait, mockExams has e1 on 2026-08-30 which is today, so NOT upcoming.
+  // mockAssignments has a1 on 2026-08-30 which is today, so NOT upcoming.
+  assert.strictEqual(schedule.upcomingDeadlines.length, 1, "Should find 1 upcoming deadline (t5)");
+  assert.strictEqual(schedule.upcomingDeadlines[0].id, "t5");
+
+  // Test: Inbox Attention
+  assert.strictEqual(schedule.inboxAttention.length, 1, "Should find 1 stale inbox item");
+  assert.strictEqual(schedule.inboxAttention[0].id, "i1");
+
 
   console.log("All tests passed successfully!");
 }

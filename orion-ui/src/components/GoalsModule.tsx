@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useOrionStore } from '../store/useOrionStore';
 import { Target, Plus, TrendingUp, Trash2 } from 'lucide-react';
 

@@ -1,7 +1,7 @@
 import "./App.css";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./AppShell";
-import Workspace from "./components/Workspace";
+import TodayModule from "./components/TodayModule";
 import OrionModule from "./components/OrionModule";
 import CalendarModule from "./components/CalendarModule";
 import StudyPlanner from "./components/StudyPlanner";
@@ -24,39 +24,37 @@ import ComingSoon from "./components/ComingSoon";
 import ResearchWorkspace from "./components/ResearchWorkspace";
 import InboxModule from "./components/InboxModule";
 
-
-
 function App() {
   return (
     <Routes>
       <Route path="/" element={<AppShell />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
-        
+
         {/* WORKSPACE */}
         <Route path="inbox" element={<InboxModule />} />
-        <Route path="dashboard" element={<Workspace />} />
+        <Route path="dashboard" element={<TodayModule />} />
         <Route path="orion" element={<OrionModule />} />
         <Route path="calendar" element={<CalendarModule />} />
         <Route path="planner" element={<StudyPlanner />} />
-        <Route path="goals" element={<ComingSoon title="Learning Goals" />} />
         <Route path="pomodoro" element={<PomodoroModule />} />
         <Route path="progress" element={<Navigate to="/dashboard" replace />} />
 
-        {/* LEARNING */}
+        {/* LEARNING & PROFESSIONAL */}
         <Route path="courses" element={<CourseManagement />} />
         <Route path="projects" element={<ProjectsModule />} />
-        <Route path="developer" element={<DeveloperWorkspace />} />`r`n        <Route path="goals" element={<GoalsModule />} />`r`n        <Route path="whiteboard" element={<WhiteboardModule />} />`r`n        <Route path="questionbank" element={<QuestionBankModule />} />
+        <Route path="developer" element={<DeveloperWorkspace />} />
+        <Route path="goals" element={<GoalsModule />} />
         <Route path="assignments" element={<AssignmentsModule />} />
         <Route path="exams" element={<ExamsModule />} />
         <Route path="quizzes" element={<QuizModule />} />
-        <Route path="questionbank" element={<ComingSoon title="Question Bank" />} />
-        <Route path="grading" element={<ComingSoon title="Grading System" />} />
+        <Route path="questionbank" element={<QuestionBankModule />} />
         <Route path="gradebook" element={<GradebookModule />} />
+        <Route path="grading" element={<ComingSoon title="Grading System" />} />
 
         {/* KNOWLEDGE */}
         <Route path="notes" element={<NotesModule />} />
         <Route path="documents" element={<DocumentsModule />} />
-        <Route path="whiteboard" element={<ComingSoon title="Digital Whiteboard" />} />
+        <Route path="whiteboard" element={<WhiteboardModule />} />
         <Route path="flashcards" element={<FlashcardsModule />} />
         <Route path="spacedrep" element={<Navigate to="/flashcards" replace />} />
         <Route path="library" element={<Navigate to="/documents" replace />} />
@@ -70,15 +68,3 @@ function App() {
   );
 }
 export default App;
-
-
-
-
-
-
-
-
-
-
-
-

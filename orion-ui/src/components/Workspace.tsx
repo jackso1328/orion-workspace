@@ -9,7 +9,7 @@ import { animate, stagger } from "animejs";
 import { getTodaySchedule } from "../domain/today/selectors";
 
 export default function Workspace() {
-  const { tasks, exams, assignments, toggleTaskCompletion, deleteTask, activeMode } = useOrionStore();
+  const { tasks, exams, assignments, inbox, toggleTaskCompletion, deleteTask, activeMode } = useOrionStore();
   const modeConfig = ORION_MODES[activeMode];
   
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -44,7 +44,7 @@ export default function Workspace() {
     nextItem,
     timelineItems,
     allDayItems
-  } = useMemo(() => getTodaySchedule({ tasks, exams, assignments, currentTime }), [tasks, exams, assignments, currentTime]);
+  } = useMemo(() => getTodaySchedule({ tasks, exams, assignments, inbox, currentTime }), [tasks, exams, assignments, currentTime]);
 
   const handleToggleTask = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();

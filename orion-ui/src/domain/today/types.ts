@@ -1,3 +1,4 @@
+import { InboxItem } from "../../domain/inbox/types";
 import { Task, Exam, Assignment } from "../../store/useOrionStore";
 
 export type TimelineItemType = 'task' | 'exam';
@@ -28,12 +29,16 @@ export interface TodayScheduleState {
   nextItem: Task | null;
   timelineItems: TimelineItem[];
   allDayItems: AllDayItem[];
+  overdueTasks: Task[];
+  upcomingDeadlines: Array<TimelineItem | AllDayItem>;
+  inboxAttention: InboxItem[];
 }
 
 export interface TodayContext {
   tasks: Task[];
   exams: Exam[];
   assignments: Assignment[];
+  inbox: InboxItem[];
   currentTime: Date;
 }
 

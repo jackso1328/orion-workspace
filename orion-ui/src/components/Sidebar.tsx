@@ -10,7 +10,7 @@ import ModeSelector from "./ModeSelector";
 
 const ROUTE_REGISTRY: Array<{path: string, label: string, icon: any, section: 'global' | 'knowledge' | 'system' | 'primary' | 'none'}> = [
   { path: "/inbox", label: "Inbox", icon: Inbox, section: 'global' },
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: 'global' },
+  { path: "/dashboard", label: "Today", icon: LayoutDashboard, section: 'global' },
   { path: "/orion", label: "Talk to Orion", icon: Sparkles, section: 'global' },
   { path: "/notes", label: "Notes", icon: PenTool, section: 'knowledge' },
   { path: "/documents", label: "Documents", icon: Folder, section: 'knowledge' },

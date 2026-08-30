@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useOrionStore } from '../store/useOrionStore';
-import { Plus, GripVertical, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Plus, GripVertical } from 'lucide-react';
 
 export default function ProjectsModule() {
-  const { projects, tasks, addProject, updateProject, addTask } = useOrionStore();
+  const { projects, tasks, addProject, addTask } = useOrionStore();
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
 

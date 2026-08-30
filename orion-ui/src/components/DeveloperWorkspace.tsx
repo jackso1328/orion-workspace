@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useOrionStore } from '../store/useOrionStore';
 import { Code, Terminal, Play, Plus, Trash2, Maximize2 } from 'lucide-react';
 
 export default function DeveloperWorkspace() {
-  const { snippets, addSnippet, deleteSnippet, tasks } = useOrionStore();
+  const { snippets, addSnippet, deleteSnippet } = useOrionStore();
   const [activeSnippetId, setActiveSnippetId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newLang, setNewLang] = useState('typescript');
 
   const activeSnippet = snippets.find(s => s.id === activeSnippetId);
-  const developerTasks = tasks.filter(t => t.projectId); // Or any filter
 
   const handleAdd = () => {
     if (newTitle.trim()) {

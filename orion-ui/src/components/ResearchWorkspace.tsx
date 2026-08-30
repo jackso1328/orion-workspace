@@ -1,4 +1,4 @@
-import React from 'react';
+
 import DocumentsModule from './DocumentsModule';
 import NotesModule from './NotesModule';
 
