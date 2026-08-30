@@ -119,6 +119,7 @@ export default function SettingsModule() {
               >
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
+                <option value="openrouter">OpenRouter</option>
               </select>
             </div>
 
