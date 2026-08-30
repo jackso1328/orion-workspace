@@ -1,0 +1,6209 @@
+--- ACTION 0: OVERWRITE ---
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background: linear-gradient(135deg, #0a0a0f 0%, #13131a 100%);
+  background-attachment: fixed;
+  
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden; /* Prevent body scroll */
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(25, 25, 35, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+}
+
+/* --- Layout --- */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  padding: 24px;
+  box-sizing: border-box;
+  gap: 24px;
+}
+
+/* --- Sidebar (Document Vault) --- */
+.sidebar {
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: #aeb4c0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.upload-zone {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.upload-zone:hover {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.doc-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.doc-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.doc-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.doc-meta {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+
+/* --- Main Chat Area --- */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 20px;
+}
+
+/* ORB ANIMATIONS */
+.orb-container {
+  margin-top: 40px;
+  margin-bottom: 40px;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  transition: all 0.5s ease-in-out;
+  box-shadow: 0 0 40px 10px var(--glow-color);
+  background: radial-gradient(circle at 30% 30%, var(--core-color), #000);
+}
+
+/* State Classes for Orb */
+.state-idle {
+  --glow-color: rgba(99, 102, 241, 0.3);
+  --core-color: #6366f1;
+  animation: pulse-idle 4s infinite alternate;
+}
+
+.state-listening {
+  --glow-color: rgba(34, 197, 94, 0.5);
+  --core-color: #22c55e;
+  animation: pulse-listen 1.5s infinite alternate;
+  transform: scale(1.1);
+}
+
+.state-thinking {
+  --glow-color: rgba(245, 158, 11, 0.6);
+  --core-color: #f59e0b;
+  animation: spin-think 2s linear infinite;
+}
+
+.state-speaking {
+  --glow-color: rgba(168, 85, 247, 0.5);
+  --core-color: #a855f7;
+  animation: pulse-speak 0.3s infinite alternate;
+}
+
+@keyframes pulse-idle {
+  0% { transform: scale(1); box-shadow: 0 0 40px 10px rgba(99, 102, 241, 0.2); }
+  100% { transform: scale(1.05); box-shadow: 0 0 60px 15px rgba(99, 102, 241, 0.4); }
+}
+@keyframes pulse-listen {
+  0% { transform: scale(1.1); box-shadow: 0 0 50px 20px rgba(34, 197, 94, 0.4); }
+  100% { transform: scale(1.15); box-shadow: 0 0 80px 30px rgba(34, 197, 94, 0.7); }
+}
+@keyframes spin-think {
+  0% { transform: rotate(0deg) scale(1); filter: hue-rotate(0deg); }
+  50% { transform: rotate(180deg) scale(0.95); filter: hue-rotate(45deg); }
+  100% { transform: rotate(360deg) scale(1); filter: hue-rotate(0deg); }
+}
+@keyframes pulse-speak {
+  0% { transform: scale(1); box-shadow: 0 0 40px 10px rgba(168, 85, 247, 0.3); }
+  100% { transform: scale(1.1); box-shadow: 0 0 70px 25px rgba(168, 85, 247, 0.7); }
+}
+
+
+/* --- Transcript Feed --- */
+.transcript-feed {
+  flex: 1;
+  width: 100%;
+  max-width: 800px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.message {
+  padding: 16px 20px;
+  border-radius: 12px;
+  max-width: 80%;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.msg-user {
+  align-self: flex-end;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-bottom-right-radius: 4px;
+}
+
+.msg-orion {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom-left-radius: 4px;
+}
+
+/* --- Controls --- */
+.mic-button {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mic-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+
+.mic-button:disabled {
+  background: #4b5563;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.status-text {
+  position: absolute;
+  top: 30px;
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+
+--- ACTION 1: OVERWRITE ---
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root {
+  /* Light Theme Palette — inspired by lusion.co warm neutrals */
+  --bg-primary: #f8f7f4;
+  --bg-secondary: #eeecea;
+  --bg-elevated: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+
+  /* Accent Colors */
+  --accent-indigo: #6366f1;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-violet: #8b5cf6;
+  --accent-rose: #f43f5e;
+
+  /* Gradients */
+  --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-warm: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+  --gradient-cool: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+
+  /* Typography */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* Spacing */
+  --section-padding: 120px;
+  --content-max-width: 1200px;
+
+  /* Transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: auto; /* GSAP handles scroll — never use smooth */
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+}
+
+/* ============================================================
+   SECTION COMMON
+   ============================================================ */
+.section {
+  min-height: 100vh;
+  padding: var(--section-padding) 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.section-inner {
+  max-width: var(--content-max-width);
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.section-label {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent-indigo);
+  margin-bottom: 20px;
+}
+
+.section-heading {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+
+.section-body {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  line-height: 1.8;
+}
+
+/* ============================================================
+   1. HERO SECTION
+   ============================================================ */
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px;
+  position: relative;
+  background: var(--bg-primary);
+}
+
+.hero-overline {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+  opacity: 0;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 10vw, 9rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  margin-bottom: 40px;
+}
+
+.hero-title .letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(80px) rotate(8deg);
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  max-width: 500px;
+  line-height: 1.7;
+  margin: 0 auto;
+  opacity: 0;
+}
+
+/* Floating Orb in Hero */
+.hero-orb-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero-orb {
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #c4b5fd, #818cf8, #6366f1);
+  filter: blur(60px);
+  opacity: 0.25;
+  animation: orb-float 8s ease-in-out infinite alternate;
+}
+
+@keyframes orb-float {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.97); }
+  100% { transform: translate(10px, -10px) scale(1.02); }
+}
+
+/* ============================================================
+   2. BRAIN SECTION
+   ============================================================ */
+.brain-section {
+  background: var(--bg-secondary);
+}
+
+.brain-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.brain-visual {
+  position: relative;
+}
+
+.terminal-window {
+  background: #1e1e2e;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.terminal-header {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px;
+  background: #2a2a3e;
+}
+
+.terminal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.terminal-dot.red { background: #ff5f57; }
+.terminal-dot.yellow { background: #ffbd2e; }
+.terminal-dot.green { background: #28c840; }
+
+.terminal-body {
+  padding: 20px 24px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  color: #a6adc8;
+  line-height: 1.8;
+  min-height: 200px;
+}
+
+.terminal-line {
+  opacity: 0;
+}
+
+.terminal-prompt {
+  color: #89b4fa;
+}
+
+.terminal-response {
+  color: #a6e3a1;
+}
+
+/* ============================================================
+   3. LIBRARY SECTION
+   ============================================================ */
+.library-section {
+  background: var(--bg-primary);
+}
+
+.library-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.library-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 60px;
+  width: 100%;
+}
+
+.library-card {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 40px 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s var(--ease-out-expo);
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(60px);
+}
+
+.library-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-hero);
+  transform: scaleX(0);
+  transition: transform 0.4s var(--ease-out-expo);
+}
+
+.library-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px -12px rgba(99, 102, 241, 0.15);
+}
+
+.library-card:hover::before {
+  transform: scaleX(1);
+}
+
+.card-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.card-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Upload Zone */
+.library-upload {
+  margin-top: 40px;
+  border: 2px dashed rgba(99, 102, 241, 0.3);
+  border-radius: 16px;
+  padding: 50px 40px;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-out-expo);
+  background: transparent;
+  opacity: 0;
+}
+
+.library-upload:hover {
+  border-color: var(--accent-indigo);
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.upload-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.upload-text {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.upload-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   4. EARS & MOUTH SECTION
+   ============================================================ */
+.ears-section {
+  background: var(--bg-secondary);
+}
+
+.ears-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.ears-card {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 50px 40px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+.ears-card-icon {
+  font-size: 4rem;
+  margin-bottom: 24px;
+  display: block;
+}
+
+.ears-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.ears-card p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.ears-card .tech-badge {
+  display: inline-block;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--accent-indigo);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+/* Waveform */
+.waveform-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 60px;
+  margin: 24px 0;
+}
+
+.wave-bar {
+  width: 4px;
+  background: var(--accent-indigo);
+  border-radius: 2px;
+  animation: wave-pulse 1.2s ease-in-out infinite;
+}
+
+.wave-bar:nth-child(1) { height: 20px; animation-delay: 0s; }
+.wave-bar:nth-child(2) { height: 35px; animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { height: 50px; animation-delay: 0.2s; }
+.wave-bar:nth-child(4) { height: 35px; animation-delay: 0.3s; }
+.wave-bar:nth-child(5) { height: 20px; animation-delay: 0.4s; }
+.wave-bar:nth-child(6) { height: 40px; animation-delay: 0.5s; }
+.wave-bar:nth-child(7) { height: 25px; animation-delay: 0.6s; }
+.wave-bar:nth-child(8) { height: 45px; animation-delay: 0.7s; }
+.wave-bar:nth-child(9) { height: 30px; animation-delay: 0.8s; }
+.wave-bar:nth-child(10) { height: 15px; animation-delay: 0.9s; }
+
+@keyframes wave-pulse {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* ============================================================
+   5. COMMAND CENTER
+   ============================================================ */
+.command-section {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 60px;
+}
+
+.command-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 32px;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  height: calc(100vh - 120px);
+}
+
+/* Sidebar */
+.vault-sidebar {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.vault-header {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vault-upload-zone {
+  border: 2px dashed rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.vault-upload-zone:hover {
+  border-color: var(--accent-indigo);
+  background: rgba(99, 102, 241, 0.03);
+  color: var(--accent-indigo);
+}
+
+.vault-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vault-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  transition: background 0.2s;
+}
+
+.vault-item:hover {
+  background: var(--bg-secondary);
+}
+
+.vault-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-item-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.vault-item-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.vault-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.vault-delete-btn:hover {
+  color: var(--accent-rose);
+}
+
+/* Main Chat */
+.command-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 32px;
+  overflow: hidden;
+}
+
+/* Status Orb */
+.command-orb-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.status-label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.command-orb {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  transition: all 0.6s var(--ease-out-expo);
+}
+
+.command-orb.idle {
+  background: radial-gradient(circle at 35% 35%, #c4b5fd, #6366f1);
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.3);
+  animation: cmd-pulse 4s ease-in-out infinite alternate;
+}
+
+.command-orb.listening {
+  background: radial-gradient(circle at 35% 35%, #6ee7b7, #10b981);
+  box-shadow: 0 0 50px rgba(16, 185, 129, 0.4);
+  animation: cmd-pulse-fast 1s ease-in-out infinite alternate;
+}
+
+.command-orb.thinking {
+  background: radial-gradient(circle at 35% 35%, #fcd34d, #f59e0b);
+  box-shadow: 0 0 50px rgba(245, 158, 11, 0.4);
+  animation: cmd-spin 2s linear infinite;
+}
+
+.command-orb.speaking {
+  background: radial-gradient(circle at 35% 35%, #c4b5fd, #8b5cf6);
+  box-shadow: 0 0 50px rgba(139, 92, 246, 0.5);
+  animation: cmd-pulse-fast 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes cmd-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+@keyframes cmd-pulse-fast {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+
+@keyframes cmd-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Transcript */
+.command-transcript {
+  flex: 1;
+  width: 100%;
+  max-width: 700px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  margin-bottom: 24px;
+}
+
+.cmd-msg {
+  padding: 14px 20px;
+  border-radius: 14px;
+  max-width: 80%;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.cmd-msg-user {
+  align-self: flex-end;
+  background: var(--accent-indigo);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.cmd-msg-orion {
+  align-self: flex-start;
+  background: var(--bg-primary);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom-left-radius: 4px;
+}
+
+.cmd-msg-orion .orion-label {
+  font-weight: 600;
+  color: var(--accent-violet);
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.cmd-placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  margin: auto;
+  font-size: 0.95rem;
+}
+
+/* Mic Button */
+.cmd-mic-btn {
+  background: var(--accent-indigo);
+  color: white;
+  border: none;
+  padding: 16px 40px;
+  border-radius: 50px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s var(--ease-out-expo);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+.cmd-mic-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45);
+}
+
+.cmd-mic-btn:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ============================================================
+   CUSTOM SCROLLBAR (light theme)
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .brain-layout,
+  .ears-layout { grid-template-columns: 1fr; gap: 40px; }
+  .library-cards { grid-template-columns: 1fr; }
+  .command-layout { grid-template-columns: 1fr; }
+  .vault-sidebar { max-height: 200px; }
+}
+
+
+--- ACTION 2: REPLACE ---
+}
+
+/* ============================================================
+   CURSOR FOLLOWER
+   ============================================================ */
+.cursor-follower {
+  position: fixed;
+  top: -20px;
+  left: -20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(99, 102, 241, 0.4);
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 0.3s;
+  mix-blend-mode: exclusion;
+}
+
+.cursor-dot {
+  position: fixed;
+  top: -4px;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-indigo);
+  pointer-events: none;
+  z-index: 10000;
+}
+
+/* ============================================================
+   PARTICLE CANVAS
+   ============================================================ */
+.particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   SCROLL PROGRESS BAR
+   ============================================================ */
+.scroll-progress-track {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: transparent;
+  z-index: 9998;
+}
+
+.scroll-progress-bar {
+  height: 100%;
+  background: var(--gradient-hero);
+  transition: width 0.1s linear;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ============================================================
+   STATS SECTION
+   ============================================================ */
+.stats-section {
+  background: var(--bg-primary);
+  min-height: auto;
+  padding: 80px 60px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 40px 20px;
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.4s var(--ease-out-expo);
+}
+
+.stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px rgba(99, 102, 241, 0.1);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--accent-indigo);
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.stat-suffix {
+  font-size: 2rem;
+  opacity: 0.7;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ============================================================
+   SECTION DIVIDERS (animated lines between sections)
+   ============================================================ */
+.section::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
+}
+
+.hero-section::after,
+.command-section::after {
+  display: none;
+}
+
+/* ============================================================
+   ENHANCED MICRO-INTERACTIONS
+   ============================================================ */
+
+/* Ripple effect on library cards */
+.library-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(99, 102, 241, 0.08), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  border-radius: 16px;
+}
+
+.library-card:hover::after {
+  opacity: 1;
+}
+
+/* Smooth icon bounce on card hover */
+.library-card:hover .card-icon {
+  animation: icon-bounce 0.5s ease;
+}
+
+@keyframes icon-bounce {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-10px); }
+  60% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+
+/* Terminal cursor blink */
+.terminal-body::after {
+  content: '▊';
+  color: #89b4fa;
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Ears card hover glow */
+.ears-card:hover {
+  box-shadow: 0 20px 50px rgba(99, 102, 241, 0.1);
+  transform: translateY(-4px);
+  transition: all 0.4s var(--ease-out-expo);
+}
+
+/* Wave bars speed up on card hover */
+.ears-card:hover .wave-bar {
+  animation-duration: 0.6s;
+}
+
+/* Vault item slide highlight */
+.vault-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-indigo);
+  border-radius: 2px;
+  transform: scaleY(0);
+  transition: transform 0.2s var(--ease-out-expo);
+}
+
+.vault-item {
+  position: relative;
+}
+
+.vault-item:hover::before {
+  transform: scaleY(1);
+}
+
+/* ============================================================
+   CUSTOM SCROLLBAR (light theme)
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .brain-layout,
+  .ears-layout { grid-template-columns: 1fr; gap: 40px; }
+  .library-cards { grid-template-columns: 1fr; }
+  .command-layout { grid-template-columns: 1fr; }
+  .vault-sidebar { max-height: 200px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .cursor-follower, .cursor-dot { display: none; }
+}
+
+
+--- ACTION 3: REPLACE ---
+.cmd-mic-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--text-primary);
+  color: white;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cmd-mic-btn:hover:not(:disabled) {
+  background: var(--accent-indigo);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+}
+
+.cmd-mic-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cmd-mic-btn.recording {
+  background: var(--accent-rose);
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(244, 63, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+--- ACTION 4: OVERWRITE ---
+:root {
+  --bg-color: #f8fafc; /* Crisp off-white */
+  --bg-secondary: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent-indigo: #6366f1;
+  --accent-rose: #f43f5e;
+  --accent-teal: #14b8a6;
+  --border-light: #e2e8f0;
+  
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  overflow: hidden; /* No scrolling on the body */
+}
+
+/* ============================================================
+   DASHBOARD LAYOUT (70/30 SPLIT)
+   ============================================================ */
+.dashboard-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.pane-workspace {
+  flex: 7; /* 70% */
+  height: 100%;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-light);
+  background: var(--bg-color);
+}
+
+.pane-agent {
+  flex: 3; /* 30% */
+  height: 100%;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   WORKSPACE (LEFT PANE)
+   ============================================================ */
+.workspace-container {
+  padding: 40px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.workspace-header {
+  margin-bottom: 40px;
+}
+
+.workspace-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.workspace-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.workspace-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.card-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.task-count {
+  font-size: 0.85rem;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Task Form */
+.add-task-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.task-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.task-input:focus {
+  border-color: var(--accent-indigo);
+}
+
+.add-btn {
+  background: var(--text-primary);
+  color: white;
+  border: none;
+  width: 44px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.add-btn:hover { background: var(--accent-indigo); }
+
+/* Task List */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  will-change: transform, opacity;
+}
+
+.task-item:hover {
+  background: white;
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.task-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: white;
+  transition: all 0.2s;
+}
+
+.checkbox.checked {
+  background: var(--accent-teal);
+  border-color: var(--accent-teal);
+}
+
+.task-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0;
+  transition: all 0.2s;
+}
+.task-item:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { color: var(--accent-rose); }
+
+
+/* Notes Area */
+.notes-area {
+  width: 100%;
+  height: 400px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 16px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+.notes-area:focus { border-color: var(--accent-indigo); }
+
+/* ============================================================
+   AGENT HUB (RIGHT PANE - COMMAND CENTER)
+   ============================================================ */
+.command-section {
+  width: 100%;
+  height: 100%;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+.command-layout.vertical {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 30px;
+}
+
+.command-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Status Labels */
+.status-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* Pulse Orb */
+.command-orb-area {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.command-orb {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 0 auto;
+  background: var(--text-primary);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  transition: all 0.5s ease;
+}
+
+.command-orb.listening {
+  background: var(--accent-rose);
+  animation: breathe-red 2s infinite ease-in-out;
+}
+
+.command-orb.thinking {
+  background: var(--accent-indigo);
+  animation: pulse-blue 1s infinite alternate;
+}
+
+.command-orb.speaking {
+  background: var(--accent-teal);
+  animation: pulse-teal 0.5s infinite alternate;
+}
+
+@keyframes breathe-red {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244,63,94,0.4); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 20px rgba(244,63,94,0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244,63,94,0); }
+}
+
+@keyframes pulse-blue {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+@keyframes pulse-teal {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.1) translateY(-5px); }
+}
+
+/* Transcript */
+.sidebar-transcript {
+  flex: 1;
+  width: 100%;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cmd-msg {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  animation: msg-slide 0.3s ease-out forwards;
+}
+
+@keyframes msg-slide {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cmd-msg-user {
+  background: #f1f5f9;
+  color: var(--text-primary);
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.cmd-msg-orion {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--text-primary);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.orion-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-indigo);
+  margin-bottom: 4px;
+}
+
+/* Mic Button */
+.cmd-mic-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--text-primary);
+  color: white;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cmd-mic-btn:hover:not(:disabled) {
+  background: var(--accent-indigo);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+}
+
+.cmd-mic-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cmd-mic-btn.recording {
+  background: var(--accent-rose);
+  animation: pulse-btn-red 1.5s infinite;
+}
+
+@keyframes pulse-btn-red {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(244, 63, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+/* ============================================================
+   MINI VAULT (IN SIDEBAR)
+   ============================================================ */
+.mini-vault {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-light);
+  height: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-header {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.vault-upload-zone {
+  border: 2px dashed var(--border-light);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+}
+
+.vault-upload-zone:hover {
+  border-color: var(--accent-indigo);
+  color: var(--accent-indigo);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.mini-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vault-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.vault-item-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  display: inline-block;
+}
+
+.vault-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.vault-delete-btn:hover {
+  color: var(--accent-rose);
+}
+
+
+--- ACTION 5: OVERWRITE ---
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Warm light palette with depth */
+  --bg-primary: #faf8f6;
+  --bg-secondary: #ffffff;
+  --bg-sidebar: linear-gradient(180deg, #f0edf6 0%, #e8e4f0 100%);
+  --bg-accent-glow: radial-gradient(ellipse at 30% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 60%);
+  
+  --text-primary: #1a1625;
+  --text-secondary: #64607a;
+  --text-muted: #a09bb5;
+  
+  --accent-violet: #8b5cf6;
+  --accent-indigo: #6366f1;
+  --accent-rose: #f43f5e;
+  --accent-teal: #14b8a6;
+  --accent-amber: #f59e0b;
+  --accent-blue: #3b82f6;
+  
+  --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  --gradient-warm: linear-gradient(135deg, #f43f5e 0%, #f59e0b 100%);
+  --gradient-cool: linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%);
+  
+  --border-light: rgba(139, 92, 246, 0.1);
+  --border-card: rgba(0, 0, 0, 0.06);
+  
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+  --shadow-xl: 0 20px 40px -10px rgba(0,0,0,0.1);
+  --shadow-glow: 0 0 30px rgba(139, 92, 246, 0.15);
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   DASHBOARD LAYOUT (70/30 SPLIT)
+   ============================================================ */
+.dashboard-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.pane-workspace {
+  flex: 7;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+/* Decorative background glow */
+.pane-workspace::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pane-workspace::after {
+  content: '';
+  position: absolute;
+  bottom: -150px;
+  left: -100px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pane-agent {
+  flex: 3;
+  height: 100%;
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border-light);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sidebar decorative orb */
+.pane-agent::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ============================================================
+   WORKSPACE (LEFT PANE)
+   ============================================================ */
+.workspace-container {
+  padding: 48px 64px;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.workspace-header {
+  margin-bottom: 48px;
+}
+
+.workspace-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.workspace-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+/* Time greeting */
+.workspace-header .time-display {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 28px;
+}
+
+/* ============================================================
+   CARDS (Glassmorphism)
+   ============================================================ */
+.workspace-card {
+  background: var(--gradient-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-card);
+  transition: all 0.4s var(--ease-out-expo);
+}
+
+.workspace-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--border-light);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.card-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.task-count {
+  font-size: 0.8rem;
+  background: var(--gradient-primary);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   TASK INPUT
+   ============================================================ */
+.add-task-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.task-input {
+  flex: 1;
+  padding: 14px 18px;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s ease;
+  background: rgba(255,255,255,0.8);
+}
+
+.task-input:focus {
+  border-color: var(--accent-violet);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.task-input::placeholder {
+  color: var(--text-muted);
+}
+
+.add-btn {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.add-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.add-btn:active {
+  transform: scale(0.95);
+}
+
+/* ============================================================
+   TASK LIST
+   ============================================================ */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition: all 0.3s var(--ease-out-expo);
+  will-change: transform, opacity;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle left accent bar on hover */
+.task-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gradient-primary);
+  border-radius: 0 3px 3px 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.task-item:hover {
+  background: white;
+  border-color: rgba(139, 92, 246, 0.12);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(4px);
+}
+
+.task-item:hover::before {
+  opacity: 1;
+}
+
+.task-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.checkbox {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d4d0e0;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.checkbox:hover {
+  border-color: var(--accent-violet);
+}
+
+.checkbox.checked {
+  background: var(--gradient-cool);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+}
+
+.task-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: #d4d0e0;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.task-item:hover .delete-btn { opacity: 1; }
+.delete-btn:hover {
+  color: var(--accent-rose);
+  background: rgba(244, 63, 94, 0.08);
+}
+
+/* ============================================================
+   NOTES / SCRATCHPAD
+   ============================================================ */
+.notes-area {
+  width: 100%;
+  height: 400px;
+  border: 1.5px solid rgba(0,0,0,0.06);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  background: rgba(255,255,255,0.7);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.notes-area:focus {
+  border-color: var(--accent-violet);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08);
+}
+
+.notes-area::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   AGENT HUB (RIGHT PANE - COMMAND CENTER)
+   ============================================================ */
+.command-section {
+  width: 100%;
+  height: 100%;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.command-layout.vertical {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 24px;
+}
+
+.command-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0; /* Fix for flex overflow */
+}
+
+/* ============================================================
+   SIDEBAR BRANDING
+   ============================================================ */
+.sidebar-brand {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.sidebar-brand h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.15em;
+}
+
+/* ============================================================
+   STATUS & ORB
+   ============================================================ */
+.status-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+  text-align: center;
+}
+
+.command-orb-area {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.command-orb {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin: 0 auto;
+  background: var(--gradient-primary);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
+  transition: all 0.6s var(--ease-out-expo);
+  position: relative;
+}
+
+/* Outer ring glow */
+.command-orb::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  animation: ring-pulse 3s infinite ease-in-out;
+}
+
+.command-orb::after {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1px solid rgba(139, 92, 246, 0.08);
+  animation: ring-pulse 3s infinite ease-in-out 0.5s;
+}
+
+@keyframes ring-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.4; }
+}
+
+.command-orb.listening {
+  background: var(--gradient-warm);
+  box-shadow: 0 10px 40px rgba(244, 63, 94, 0.35);
+  animation: orb-breathe 2s infinite ease-in-out;
+}
+
+.command-orb.thinking {
+  background: var(--gradient-primary);
+  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.4);
+  animation: orb-spin-glow 1.5s infinite linear;
+}
+
+.command-orb.speaking {
+  background: var(--gradient-cool);
+  box-shadow: 0 10px 40px rgba(20, 184, 166, 0.35);
+  animation: orb-bounce 0.6s infinite alternate ease-in-out;
+}
+
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+@keyframes orb-spin-glow {
+  0% { box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4), 0 0 60px rgba(99, 102, 241, 0.2); }
+  50% { box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2); }
+  100% { box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4), 0 0 60px rgba(99, 102, 241, 0.2); }
+}
+
+@keyframes orb-bounce {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.08) translateY(-4px); }
+}
+
+/* ============================================================
+   TRANSCRIPT
+   ============================================================ */
+.sidebar-transcript {
+  flex: 1;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.cmd-placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: auto 0;
+  line-height: 1.6;
+}
+
+.cmd-msg {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  animation: msg-slide 0.4s var(--ease-out-expo) forwards;
+  max-width: 95%;
+}
+
+@keyframes msg-slide {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cmd-msg-user {
+  background: var(--gradient-primary);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.cmd-msg-orion {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.orion-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+  letter-spacing: 0.1em;
+}
+
+/* ============================================================
+   MIC BUTTON
+   ============================================================ */
+.cmd-mic-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.4s var(--ease-out-expo);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  letter-spacing: 0.02em;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect */
+.cmd-mic-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.cmd-mic-btn:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.cmd-mic-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+}
+
+.cmd-mic-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.cmd-mic-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cmd-mic-btn.recording {
+  background: var(--gradient-warm);
+  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
+  animation: btn-pulse-red 1.5s infinite;
+}
+
+@keyframes btn-pulse-red {
+  0% { box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3); }
+  50% { box-shadow: 0 4px 30px rgba(244, 63, 94, 0.5); }
+  100% { box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3); }
+}
+
+/* ============================================================
+   MINI VAULT
+   ============================================================ */
+.mini-vault {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+}
+
+.vault-header {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  color: var(--text-primary);
+}
+
+.vault-upload-zone {
+  border: 2px dashed rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.vault-upload-zone:hover {
+  border-color: var(--accent-violet);
+  color: var(--accent-violet);
+  background: rgba(139, 92, 246, 0.04);
+  transform: translateY(-1px);
+}
+
+.mini-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vault-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.vault-item:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.vault-item-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  display: inline-block;
+}
+
+.vault-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.vault-delete-btn:hover {
+  color: var(--accent-rose);
+  background: rgba(244, 63, 94, 0.08);
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.4);
+}
+
+/* ============================================================
+   SELECTION
+   ============================================================ */
+::selection {
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--text-primary);
+}
+
+
+--- ACTION 6: REPLACE ---
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 28px;
+}
+
+/* ============================================================
+   QUICK STATS ROW
+   ============================================================ */
+.quick-stats {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 50px;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s var(--ease-out-expo);
+}
+
+.stat-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-number {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--accent-violet);
+}
+
+.completed-chip .stat-number {
+  color: var(--accent-teal);
+}
+
+.streak-chip .stat-number {
+  font-size: 1.1rem;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+--- ACTION 7: REPLACE ---
+/* ============================================================
+   SELECTION
+   ============================================================ */
+::selection {
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   TASK MODAL
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.modal-content {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  border: 1px solid var(--border-light);
+}
+
+.modal-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  color: var(--accent-rose);
+}
+
+.modal-header {
+  margin-bottom: 24px;
+  padding-right: 32px;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.modal-title-input {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  border: none;
+  border-bottom: 2px solid var(--accent-violet);
+  outline: none;
+  background: transparent;
+  padding-bottom: 4px;
+}
+
+.modal-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: var(--bg-primary);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.priority-critical { color: var(--accent-rose); font-weight: 700; }
+.priority-high { color: var(--accent-amber); font-weight: 700; }
+.priority-medium { color: var(--accent-indigo); }
+.priority-low { color: var(--text-secondary); }
+
+.modal-body {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.modal-desc {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.modal-desc-input {
+  width: 100%;
+  min-height: 100px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.modal-desc-input:focus {
+  border-color: var(--accent-violet);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
+  padding-top: 24px;
+}
+
+.modal-actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+}
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: var(--text-primary);
+}
+.btn-secondary:hover { background: #e2e8f0; }
+
+.btn-danger {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--accent-rose);
+}
+.btn-danger:hover { background: rgba(244, 63, 94, 0.2); }
+
+.btn-toggle {
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--accent-teal);
+}
+.btn-toggle:hover { background: rgba(20, 184, 166, 0.2); }
+.btn-toggle.completed {
+  background: #f1f5f9;
+  color: var(--text-muted);
+}
+
+--- ACTION 8: COMMAND ---
+$sidebarContent = @"
+import { NavLink } from `"react-router-dom`";
+import { 
+  LayoutDashboard, Calendar, CheckSquare, 
+  GraduationCap, PenTool, Folder, 
+  Settings, FileText
+} from `"lucide-react`";
+
+export default function Sidebar() {
+  return (
+    <aside className=`"app-sidebar`">
+      <div className=`"sidebar-brand`">
+        <h3>O R I O N</h3>
+      </div>
+      
+      <div className=`"sidebar-section`">
+        <h4 className=`"sidebar-label`">WORKSPACE</h4>
+        <nav className=`"sidebar-nav`">
+          <NavLink to=`"/dashboard`" className=`"nav-item`">
+            <LayoutDashboard size={18} /> Dashboard
+          </NavLink>
+          <NavLink to=`"/calendar`" className=`"nav-item`">
+            <Calendar size={18} /> Calendar
+          </NavLink>
+          <NavLink to=`"/tasks`" className=`"nav-item`">
+            <CheckSquare size={18} /> Tasks
+          </NavLink>
+        </nav>
+      </div>
+
+      <div className=`"sidebar-section`">
+        <h4 className=`"sidebar-label`">LEARNING</h4>
+        <nav className=`"sidebar-nav`">
+          <NavLink to=`"/courses`" className=`"nav-item`">
+            <GraduationCap size={18} /> Courses
+          </NavLink>
+          <NavLink to=`"/exams`" className=`"nav-item`">
+            <FileText size={18} /> Exams & Quizzes
+          </NavLink>
+        </nav>
+      </div>
+
+      <div className=`"sidebar-section`">
+        <h4 className=`"sidebar-label`">KNOWLEDGE</h4>
+        <nav className=`"sidebar-nav`">
+          <NavLink to=`"/notes`" className=`"nav-item`">
+            <PenTool size={18} /> Notes
+          </NavLink>
+          <NavLink to=`"/documents`" className=`"nav-item`">
+            <Folder size={18} /> Documents
+          </NavLink>
+        </nav>
+      </div>
+
+      <div className=`"sidebar-section bottom`">
+        <nav className=`"sidebar-nav`">
+          <NavLink to=`"/settings`" className=`"nav-item`">
+            <Settings size={18} /> Settings
+          </NavLink>
+        </nav>
+      </div>
+    </aside>
+  );
+}
+"@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\components\Sidebar.tsx" -Value $sidebarContent
+
+$appShellContent = @"
+import { Outlet } from `"react-router-dom`";
+import Sidebar from `"./components/Sidebar`";
+import CommandCenter from `"./sections/CommandCenter`";
+
+export default function AppShell() {
+  return (
+    <div className=`"app-root`">
+      <Sidebar />
+      <main className=`"app-content`">
+        <div className=`"dashboard-layout`">
+          <div className=`"pane-workspace`">
+            <Outlet />
+          </div>
+          <div className=`"pane-agent`">
+            <CommandCenter />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+"@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\AppShell.tsx" -Value $appShellContent
+
+$mainContent = @"
+import React from `"react`";
+import ReactDOM from `"react-dom/client`";
+import { BrowserRouter } from `"react-router-dom`";
+import App from `"./App`";
+
+ReactDOM.createRoot(document.getElementById(`"root`") as HTMLElement).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>,
+);
+"@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\main.tsx" -Value $mainContent
+
+$appContent = @"
+import `"./App.css`";
+import { Routes, Route, Navigate } from `"react-router-dom`";
+import AppShell from `"./AppShell`";
+import Workspace from `"./components/Workspace`";
+
+function App() {
+  return (
+    <Routes>
+      <Route path=`"/`" element={<AppShell />}>
+        <Route index element={<Navigate to=`"/dashboard`" replace />} />
+        <Route path=`"dashboard`" element={<Workspace />} />
+        {/* Placeholder routes for the other modules */}
+        <Route path=`"calendar`" element={<div className=`"placeholder-view`"><h2>Calendar Module</h2><p>Coming in Phase 3</p></div>} />
+        <Route path=`"tasks`" element={<div className=`"placeholder-view`"><h2>All Tasks</h2><p>Coming in Phase 4</p></div>} />
+        <Route path=`"courses`" element={<div className=`"placeholder-view`"><h2>Course Manager</h2><p>Coming in Phase 5</p></div>} />
+        <Route path=`"exams`" element={<div className=`"placeholder-view`"><h2>Examination System</h2><p>Coming in Phase 5</p></div>} />
+        <Route path=`"notes`" element={<div className=`"placeholder-view`"><h2>Rich Notes System</h2><p>Coming soon</p></div>} />
+        <Route path=`"documents`" element={<div className=`"placeholder-view`"><h2>Document Vault</h2><p>Coming soon</p></div>} />
+        <Route path=`"settings`" element={<div className=`"placeholder-view`"><h2>Settings</h2></div>} />
+      </Route>
+    </Routes>
+  );
+}
+export default App;
+"@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.tsx" -Value $appContent
+
+
+--- ACTION 9: COMMAND ---
+$cssAppend = @"
+
+/* ============================================================
+   APP SHELL & SIDEBAR
+   ============================================================ */
+.app-root {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.app-sidebar {
+  width: 260px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.sidebar-brand {
+  margin-bottom: 40px;
+  padding: 0 12px;
+}
+
+.sidebar-brand h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sidebar-section {
+  margin-bottom: 32px;
+}
+
+.sidebar-section.bottom {
+  margin-top: auto;
+  margin-bottom: 0;
+}
+
+.sidebar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--accent-violet);
+}
+
+.nav-item.active {
+  background: white;
+  color: var(--accent-violet);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+
+.app-content {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Adjust dashboard layout to fit inside app-content */
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder-view {
+  padding: 60px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+"@
+
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssAppend
+
+
+--- ACTION 10: COMMAND ---
+$calCss = @"
+
+/* ============================================================
+   CALENDAR WIDGET
+   ============================================================ */
+.calendar-widget {
+  padding: 10px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.cal-month {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.cal-btn {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.cal-btn:hover {
+  background: var(--bg-sidebar);
+  color: var(--accent-violet);
+}
+
+.cal-days-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.cal-day-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.cal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  background: var(--bg-primary);
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.cal-cell:hover {
+  border-color: var(--accent-violet);
+  background: white;
+}
+
+.cal-cell.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.cal-cell.selected {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.cal-number {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.cal-cell.selected .cal-number {
+  color: white;
+}
+
+.cal-dots {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.cal-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.cal-dot-more {
+  font-size: 0.5rem;
+  line-height: 4px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.cal-cell.selected .cal-dot-more {
+  color: white;
+}
+"@
+
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $calCss
+
+
+--- ACTION 11: COMMAND ---
+$sidebarContent = @'
+import { NavLink } from "react-router-dom";
+import { 
+  LayoutDashboard, Calendar, CheckSquare, Clock, TrendingUp, Target,
+  GraduationCap, FileText, ClipboardList, HelpCircle, FileCheck, BookOpen,
+  PenTool, Folder, Monitor, Layers, Repeat, Library,
+  Microscope, Edit3, Code, Briefcase, Settings
+} from "lucide-react";
+
+export default function Sidebar() {
+  return (
+    <aside className="app-sidebar" style={{ overflowY: 'auto' }}>
+      <div className="sidebar-brand">
+        <h3>O R I O N</h3>
+      </div>
+      
+      <div className="sidebar-section">
+        <h4 className="sidebar-label">WORKSPACE</h4>
+        <nav className="sidebar-nav">
+          <NavLink to="/dashboard" className="nav-item"><LayoutDashboard size={18} /> Dashboard</NavLink>
+          <NavLink to="/calendar" className="nav-item"><Calendar size={18} /> Calendar</NavLink>
+          <NavLink to="/planner" className="nav-item"><CheckSquare size={18} /> Study Planner</NavLink>
+          <NavLink to="/goals" className="nav-item"><Target size={18} /> Learning Goals</NavLink>
+          <NavLink to="/pomodoro" className="nav-item"><Clock size={18} /> Pomodoro Timer</NavLink>
+          <NavLink to="/progress" className="nav-item"><TrendingUp size={18} /> Progress Tracking</NavLink>
+        </nav>
+      </div>
+
+      <div className="sidebar-section">
+        <h4 className="sidebar-label">LEARNING</h4>
+        <nav className="sidebar-nav">
+          <NavLink to="/courses" className="nav-item"><GraduationCap size={18} /> Courses</NavLink>
+          <NavLink to="/assignments" className="nav-item"><ClipboardList size={18} /> Assignments</NavLink>
+          <NavLink to="/exams" className="nav-item"><FileText size={18} /> Exams</NavLink>
+          <NavLink to="/quizzes" className="nav-item"><HelpCircle size={18} /> Quizzes</NavLink>
+          <NavLink to="/questionbank" className="nav-item"><BookOpen size={18} /> Question Bank</NavLink>
+          <NavLink to="/grading" className="nav-item"><FileCheck size={18} /> Grading System</NavLink>
+          <NavLink to="/gradebook" className="nav-item"><FileText size={18} /> Gradebook</NavLink>
+        </nav>
+      </div>
+
+      <div className="sidebar-section">
+        <h4 className="sidebar-label">KNOWLEDGE</h4>
+        <nav className="sidebar-nav">
+          <NavLink to="/notes" className="nav-item"><PenTool size={18} /> Notes System</NavLink>
+          <NavLink to="/documents" className="nav-item"><Folder size={18} /> Document Reader</NavLink>
+          <NavLink to="/whiteboard" className="nav-item"><Monitor size={18} /> Digital Whiteboard</NavLink>
+          <NavLink to="/flashcards" className="nav-item"><Layers size={18} /> Flashcards</NavLink>
+          <NavLink to="/spacedrep" className="nav-item"><Repeat size={18} /> Spaced Repetition</NavLink>
+          <NavLink to="/library" className="nav-item"><Library size={18} /> Resource Library</NavLink>
+        </nav>
+      </div>
+
+      <div className="sidebar-section">
+        <h4 className="sidebar-label">RESEARCH & DEV</h4>
+        <nav className="sidebar-nav">
+          <NavLink to="/research" className="nav-item"><Microscope size={18} /> Research Workspace</NavLink>
+          <NavLink to="/writing" className="nav-item"><Edit3 size={18} /> Writing Workspace</NavLink>
+          <NavLink to="/challenges" className="nav-item"><Code size={18} /> Programming Challenges</NavLink>
+          <NavLink to="/portfolio" className="nav-item"><Briefcase size={18} /> Developer Portfolio</NavLink>
+        </nav>
+      </div>
+
+      <div className="sidebar-section bottom">
+        <nav className="sidebar-nav">
+          <NavLink to="/settings" className="nav-item">
+            <Settings size={18} /> Settings
+          </NavLink>
+        </nav>
+      </div>
+    </aside>
+  );
+}
+'@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\components\Sidebar.tsx" -Value $sidebarContent
+
+$appContent = @'
+import "./App.css";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AppShell from "./AppShell";
+import Workspace from "./components/Workspace";
+
+const Placeholder = ({ title }: { title: string }) => (
+  <div className="placeholder-view">
+    <h2>{title}</h2>
+    <p>Module shell initialized. Core functionality coming soon.</p>
+  </div>
+);
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<AppShell />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        
+        {/* WORKSPACE */}
+        <Route path="dashboard" element={<Workspace />} />
+        <Route path="calendar" element={<Placeholder title="Calendar" />} />
+        <Route path="planner" element={<Placeholder title="Study Planner" />} />
+        <Route path="goals" element={<Placeholder title="Learning Goals" />} />
+        <Route path="pomodoro" element={<Placeholder title="Pomodoro & Focus Tools" />} />
+        <Route path="progress" element={<Placeholder title="Progress Tracking" />} />
+
+        {/* LEARNING */}
+        <Route path="courses" element={<Placeholder title="Course Management" />} />
+        <Route path="assignments" element={<Placeholder title="Assignment System" />} />
+        <Route path="exams" element={<Placeholder title="Examination System" />} />
+        <Route path="quizzes" element={<Placeholder title="Quiz System" />} />
+        <Route path="questionbank" element={<Placeholder title="Question Bank" />} />
+        <Route path="grading" element={<Placeholder title="Grading System" />} />
+        <Route path="gradebook" element={<Placeholder title="Gradebook" />} />
+
+        {/* KNOWLEDGE */}
+        <Route path="notes" element={<Placeholder title="Notes System" />} />
+        <Route path="documents" element={<Placeholder title="Document Reader" />} />
+        <Route path="whiteboard" element={<Placeholder title="Digital Whiteboard" />} />
+        <Route path="flashcards" element={<Placeholder title="Flashcards" />} />
+        <Route path="spacedrep" element={<Placeholder title="Spaced-Repetition System" />} />
+        <Route path="library" element={<Placeholder title="Resource Library" />} />
+
+        {/* RESEARCH & DEV */}
+        <Route path="research" element={<Placeholder title="Research Workspace" />} />
+        <Route path="writing" element={<Placeholder title="Writing Workspace" />} />
+        <Route path="challenges" element={<Placeholder title="Programming Challenges" />} />
+        <Route path="portfolio" element={<Placeholder title="Developer Portfolio" />} />
+
+        <Route path="settings" element={<Placeholder title="Settings" />} />
+      </Route>
+    </Routes>
+  );
+}
+export default App;
+'@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.tsx" -Value $appContent
+
+
+--- ACTION 12: COMMAND ---
+$appContent = @'
+import "./App.css";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AppShell from "./AppShell";
+import Workspace from "./components/Workspace";
+import CalendarModule from "./components/CalendarModule";
+
+const Placeholder = ({ title }: { title: string }) => (
+  <div className="placeholder-view">
+    <h2>{title}</h2>
+    <p>Module shell initialized. Core functionality coming soon.</p>
+  </div>
+);
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<AppShell />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        
+        {/* WORKSPACE */}
+        <Route path="dashboard" element={<Workspace />} />
+        <Route path="calendar" element={<CalendarModule />} />
+        <Route path="planner" element={<Placeholder title="Study Planner" />} />
+        <Route path="goals" element={<Placeholder title="Learning Goals" />} />
+        <Route path="pomodoro" element={<Placeholder title="Pomodoro & Focus Tools" />} />
+        <Route path="progress" element={<Placeholder title="Progress Tracking" />} />
+
+        {/* LEARNING */}
+        <Route path="courses" element={<Placeholder title="Course Management" />} />
+        <Route path="assignments" element={<Placeholder title="Assignment System" />} />
+        <Route path="exams" element={<Placeholder title="Examination System" />} />
+        <Route path="quizzes" element={<Placeholder title="Quiz System" />} />
+        <Route path="questionbank" element={<Placeholder title="Question Bank" />} />
+        <Route path="grading" element={<Placeholder title="Grading System" />} />
+        <Route path="gradebook" element={<Placeholder title="Gradebook" />} />
+
+        {/* KNOWLEDGE */}
+        <Route path="notes" element={<Placeholder title="Notes System" />} />
+        <Route path="documents" element={<Placeholder title="Document Reader" />} />
+        <Route path="whiteboard" element={<Placeholder title="Digital Whiteboard" />} />
+        <Route path="flashcards" element={<Placeholder title="Flashcards" />} />
+        <Route path="spacedrep" element={<Placeholder title="Spaced-Repetition System" />} />
+        <Route path="library" element={<Placeholder title="Resource Library" />} />
+
+        {/* RESEARCH & DEV */}
+        <Route path="research" element={<Placeholder title="Research Workspace" />} />
+        <Route path="writing" element={<Placeholder title="Writing Workspace" />} />
+        <Route path="challenges" element={<Placeholder title="Programming Challenges" />} />
+        <Route path="portfolio" element={<Placeholder title="Developer Portfolio" />} />
+
+        <Route path="settings" element={<Placeholder title="Settings" />} />
+      </Route>
+    </Routes>
+  );
+}
+export default App;
+'@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.tsx" -Value $appContent
+
+
+--- ACTION 13: COMMAND ---
+$calCss = @"
+
+/* ============================================================
+   CALENDAR MODULE (FULL PAGE)
+   ============================================================ */
+.module-container {
+  padding: 40px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow-y: auto;
+}
+
+.module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.current-month {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  width: 200px;
+  text-align: center;
+}
+
+.btn-icon {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  cursor: pointer;
+  color: var(--text-primary);
+  display: flex;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s;
+}
+.btn-icon:hover {
+  background: var(--bg-sidebar);
+  color: var(--accent-violet);
+}
+
+.full-calendar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.full-cal-days-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-card);
+}
+
+.full-cal-day-name {
+  padding: 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  border-right: 1px solid var(--border-card);
+}
+.full-cal-day-name:last-child {
+  border-right: none;
+}
+
+.full-cal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.full-cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex: 1;
+  border-bottom: 1px solid var(--border-card);
+}
+.full-cal-row:last-child {
+  border-bottom: none;
+}
+
+.full-cal-cell {
+  border-right: 1px solid var(--border-card);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background 0.2s;
+  min-height: 100px;
+}
+.full-cal-cell:last-child {
+  border-right: none;
+}
+.full-cal-cell:hover {
+  background: rgba(139, 92, 246, 0.02);
+}
+.full-cal-cell.disabled {
+  background: #f9f9fb;
+}
+.full-cal-cell.disabled .date-number {
+  color: var(--text-muted);
+}
+.full-cal-cell.today {
+  background: rgba(20, 184, 166, 0.03);
+}
+
+.full-cal-date {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.date-number {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+.full-cal-cell.today .date-number {
+  color: var(--accent-teal);
+  font-weight: 700;
+}
+
+.add-task-quick-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding: 2px;
+  border-radius: 4px;
+}
+.full-cal-cell:hover .add-task-quick-btn {
+  opacity: 1;
+}
+.add-task-quick-btn:hover {
+  background: var(--bg-sidebar);
+  color: var(--accent-violet);
+}
+
+.full-cal-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.cal-task-item {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-left: 3px solid var(--accent-violet);
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-task-item:hover {
+  box-shadow: var(--shadow-sm);
+}
+.cal-task-item.completed {
+  opacity: 0.6;
+  border-left-color: var(--text-muted) !important;
+}
+
+.quick-add-form input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  border: 1px solid var(--accent-violet);
+  border-radius: 4px;
+  outline: none;
+  background: white;
+}
+"@
+
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $calCss
+
+
+--- ACTION 14: COMMAND ---
+$appContent = @'
+import "./App.css";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AppShell from "./AppShell";
+import Workspace from "./components/Workspace";
+import CalendarModule from "./components/CalendarModule";
+import StudyPlanner from "./components/StudyPlanner";
+
+const Placeholder = ({ title }: { title: string }) => (
+  <div className="placeholder-view">
+    <h2>{title}</h2>
+    <p>Module shell initialized. Core functionality coming soon.</p>
+  </div>
+);
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<AppShell />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        
+        {/* WORKSPACE */}
+        <Route path="dashboard" element={<Workspace />} />
+        <Route path="calendar" element={<CalendarModule />} />
+        <Route path="planner" element={<StudyPlanner />} />
+        <Route path="goals" element={<Placeholder title="Learning Goals" />} />
+        <Route path="pomodoro" element={<Placeholder title="Pomodoro & Focus Tools" />} />
+        <Route path="progress" element={<Placeholder title="Progress Tracking" />} />
+
+        {/* LEARNING */}
+        <Route path="courses" element={<Placeholder title="Course Management" />} />
+        <Route path="assignments" element={<Placeholder title="Assignment System" />} />
+        <Route path="exams" element={<Placeholder title="Examination System" />} />
+        <Route path="quizzes" element={<Placeholder title="Quiz System" />} />
+        <Route path="questionbank" element={<Placeholder title="Question Bank" />} />
+        <Route path="grading" element={<Placeholder title="Grading System" />} />
+        <Route path="gradebook" element={<Placeholder title="Gradebook" />} />
+
+        {/* KNOWLEDGE */}
+        <Route path="notes" element={<Placeholder title="Notes System" />} />
+        <Route path="documents" element={<Placeholder title="Document Reader" />} />
+        <Route path="whiteboard" element={<Placeholder title="Digital Whiteboard" />} />
+        <Route path="flashcards" element={<Placeholder title="Flashcards" />} />
+        <Route path="spacedrep" element={<Placeholder title="Spaced-Repetition System" />} />
+        <Route path="library" element={<Placeholder title="Resource Library" />} />
+
+        {/* RESEARCH & DEV */}
+        <Route path="research" element={<Placeholder title="Research Workspace" />} />
+        <Route path="writing" element={<Placeholder title="Writing Workspace" />} />
+        <Route path="challenges" element={<Placeholder title="Programming Challenges" />} />
+        <Route path="portfolio" element={<Placeholder title="Developer Portfolio" />} />
+
+        <Route path="settings" element={<Placeholder title="Settings" />} />
+      </Route>
+    </Routes>
+  );
+}
+export default App;
+'@
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.tsx" -Value $appContent
+
+
+--- ACTION 15: COMMAND ---
+$cssContent = @"
+
+/* ============================================================
+   STUDY PLANNER MODULE
+   ============================================================ */
+.planner-module {
+  padding: 40px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.planner-header {
+  margin-bottom: 30px;
+}
+
+.planner-layout {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  min-height: 0; /* Important for flex child scrolling */
+}
+
+/* Timeline */
+.timeline-container {
+  flex: 1;
+  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto;
+  position: relative;
+}
+
+.timeline-grid {
+  position: relative;
+  min-height: 100%;
+  padding-bottom: 20px;
+}
+
+.timeline-row {
+  display: flex;
+  height: 60px; /* Crucial: 1 hour = 60px */
+}
+
+.time-label {
+  width: 70px;
+  text-align: right;
+  padding-right: 12px;
+  padding-top: 8px; /* Offset to align with line */
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border-card);
+}
+
+.time-slot {
+  flex: 1;
+  position: relative;
+}
+
+.slot-divider {
+  border-top: 1px solid var(--border-light);
+  width: 100%;
+  position: absolute;
+  top: 15px; /* Offset to visually center */
+}
+
+/* Scheduled Blocks */
+.scheduled-block {
+  position: absolute;
+  left: 85px; /* Past the time label */
+  right: 20px;
+  border-radius: var(--radius-sm);
+  border-left-width: 4px;
+  border-left-style: solid;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s, filter 0.2s;
+  z-index: 10;
+  overflow: hidden;
+  margin-top: 15px;
+}
+.scheduled-block:hover {
+  box-shadow: var(--shadow-md);
+  filter: brightness(0.95);
+}
+
+.block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.block-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+.remove-block-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.scheduled-block:hover .remove-block-btn {
+  opacity: 1;
+}
+.remove-block-btn:hover {
+  color: var(--accent-red);
+}
+
+.block-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.focus-btn {
+  background: white;
+  border: 1px solid rgba(0,0,0,0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+.focus-btn:hover {
+  background: var(--bg-sidebar);
+  color: var(--accent-violet);
+  border-color: var(--accent-violet);
+}
+
+/* Unscheduled Sidebar */
+.unscheduled-sidebar {
+  width: 320px;
+  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.unscheduled-sidebar h3 {
+  font-size: 1.1rem;
+  font-family: var(--font-display);
+  margin-bottom: 4px;
+}
+.helper-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.draggable-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.draggable-task {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  border-left-width: 4px;
+  border-left-style: solid;
+  cursor: grab;
+  transition: all 0.2s;
+}
+.draggable-task:active {
+  cursor: grabbing;
+  box-shadow: var(--shadow-md);
+  transform: scale(0.98);
+}
+.draggable-task:hover {
+  background: white;
+  border-color: var(--accent-violet);
+}
+
+.drag-handle {
+  color: var(--text-muted);
+  margin-right: 12px;
+  cursor: grab;
+}
+.task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.task-duration {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.all-scheduled {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  gap: 12px;
+  height: 100%;
+}
+"@
+
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+
+--- ACTION 16: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -Tail 30
+
+--- ACTION 17: COMMAND ---
+$cssContent = @"
+
+.quick-add-planner-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-primary);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-card);
+}
+.quick-add-planner-form input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-size: 0.85rem;
+  background: white;
+}
+.quick-add-planner-form input[type="text"]:focus {
+  border-color: var(--accent-violet);
+}
+
+.duration-input-row {
+  display: flex;
+  gap: 8px;
+}
+.duration-input-row input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-size: 0.85rem;
+  background: white;
+}
+.duration-input-row button {
+  background: var(--accent-violet);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+.duration-input-row button:hover {
+  opacity: 0.9;
+}
+"@
+
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+
+--- ACTION 18: COMMAND ---
+$cssContent = @"
+
+/* ============================================================
+   NOTES MODULE (TIPTAP)
+   ============================================================ */
+.notes-module {
+  display: flex;
+  height: 100%;
+  background: white;
+}
+
+.notes-sidebar {
+  width: 280px;
+  border-right: 1px solid var(--border-card);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-sidebar-header {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.notes-sidebar-header h2 {
+  font-size: 1.1rem;
+  font-family: var(--font-display);
+}
+
+.add-note-btn {
+  background: transparent;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  transition: all 0.2s;
+}
+.add-note-btn:hover {
+  background: white;
+  color: var(--accent-violet);
+  box-shadow: var(--shadow-sm);
+}
+
+.notes-search {
+  margin: 0 20px 20px 20px;
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+.notes-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.notes-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 10px;
+}
+
+.note-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.note-list-item:hover {
+  background: rgba(139, 92, 246, 0.05);
+}
+.note-list-item.active {
+  background: white;
+  border-color: var(--border-card);
+  box-shadow: var(--shadow-sm);
+}
+.note-icon {
+  color: var(--accent-violet);
+}
+.note-meta {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.note-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+.note-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Editor Area */
+.notes-editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 40px 60px;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.document-title-input {
+  font-size: 2.5rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  border: none;
+  outline: none;
+  width: 100%;
+  color: var(--text-primary);
+  background: transparent;
+}
+.document-title-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.editor-canvas {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.empty-editor-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  gap: 16px;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Tiptap overrides */
+.tiptap {
+  outline: none;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #333;
+}
+.tiptap p {
+  margin-bottom: 1em;
+}
+.tiptap h1, .tiptap h2, .tiptap h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-family: var(--font-display);
+}
+.tiptap p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+"@
+
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+
+--- ACTION 19: COMMAND ---
+$cssContent = @"
+.delete-btn-header {
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+}
+.delete-btn-header:hover {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--accent-red);
+}
+"@
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+--- ACTION 20: COMMAND ---
+$cssContent = @"
+
+/* ============================================================
+   POMODORO MODULE
+   ============================================================ */
+.pomodoro-module {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  padding: 40px;
+}
+
+.pomodoro-container {
+  background: white;
+  padding: 60px;
+  border-radius: 32px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+.pomodoro-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.pomodoro-header h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.pomodoro-header .subtitle {
+  color: var(--text-muted);
+}
+
+.task-selector-wrapper {
+  width: 100%;
+  margin-bottom: 30px;
+}
+.task-selector {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-card);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  cursor: pointer;
+  appearance: none; /* simple native dropdown for now */
+}
+.task-selector:focus {
+  border-color: var(--accent-violet);
+}
+
+.pomodoro-modes {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 40px;
+  background: var(--bg-primary);
+  padding: 6px;
+  border-radius: 20px;
+}
+.mode-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mode-btn.active.pomodoro-theme {
+  background: white;
+  color: var(--accent-red);
+  box-shadow: var(--shadow-sm);
+}
+.mode-btn.active.break-theme {
+  background: white;
+  color: var(--accent-teal);
+  box-shadow: var(--shadow-sm);
+}
+.mode-btn:not(.active):hover {
+  color: var(--text-primary);
+}
+
+.timer-wrapper {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+.timer-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotate(-90deg); /* Start from top */
+}
+.timer-track {
+  fill: none;
+  stroke: var(--bg-sidebar);
+  stroke-width: 12;
+}
+.timer-progress {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+.timer-text-overlay {
+  font-family: var(--font-display);
+  font-size: 5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums; /* Keeps numbers from shifting horizontally */
+}
+
+.timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.control-btn {
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, filter 0.2s;
+}
+.control-btn:hover {
+  transform: scale(1.05);
+}
+.control-btn:active {
+  transform: scale(0.95);
+}
+.control-btn.primary {
+  width: 72px;
+  height: 72px;
+  color: white;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+}
+.control-btn.primary:hover {
+  filter: brightness(1.1);
+}
+.control-btn.secondary {
+  width: 56px;
+  height: 56px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+}
+.control-btn.secondary:hover {
+  color: var(--text-primary);
+  background: var(--border-light);
+}
+"@
+
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+
+--- ACTION 21: COMMAND ---
+$cssContent = @"
+
+.settings-toggle-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.settings-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.pomodoro-settings-panel {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.pomodoro-settings-panel h3 {
+  text-align: center;
+  font-family: var(--font-display);
+  margin-bottom: 12px;
+}
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.settings-row label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.settings-row input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  outline: none;
+}
+.settings-row input:focus {
+  border-color: var(--accent-violet);
+}
+"@
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+--- ACTION 22: COMMAND ---
+$cssContent = @"
+
+/* ============================================================
+   COURSE MANAGEMENT MODULE
+   ============================================================ */
+.courses-module {
+  display: flex;
+  height: 100%;
+  background: white;
+}
+
+.courses-sidebar {
+  width: 300px;
+  border-right: 1px solid var(--border-card);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+}
+.courses-sidebar .sidebar-header {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.course-list {
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+.course-card {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  border-left-width: 4px;
+  border-left-style: solid;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.course-card:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+.course-card.active {
+  box-shadow: var(--shadow-md);
+  border-right: 2px solid var(--accent-violet);
+}
+.course-card h3 {
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.course-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.course-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.progress-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.course-content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px;
+}
+.course-dashboard {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.course-header {
+  border-bottom: 2px solid;
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+.course-category {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: block;
+}
+.course-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.course-header p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.curriculum-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.curriculum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.course-module-card {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.module-header {
+  background: var(--bg-sidebar);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-card);
+}
+.module-header h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+.lesson-list {
+  display: flex;
+  flex-direction: column;
+}
+.lesson-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  gap: 16px;
+  transition: background 0.2s;
+}
+.lesson-item:hover {
+  background: var(--bg-primary);
+}
+.lesson-item:last-child {
+  border-bottom: none;
+}
+.lesson-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lesson-title {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.lesson-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  background: var(--border-light);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.add-lesson-btn {
+  background: transparent;
+  border: none;
+  padding: 16px;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s;
+}
+.add-lesson-btn:hover {
+  color: var(--accent-violet);
+  background: var(--bg-primary);
+}
+"@
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+--- ACTION 23: COMMAND ---
+$cssContent = @"
+
+/* ============================================================
+   ASSIGNMENTS MODULE
+   ============================================================ */
+.assignments-module {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  padding: 40px;
+}
+
+.assignments-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.assignments-header {
+  margin-bottom: 32px;
+}
+.assignments-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.assignments-header .subtitle {
+  color: var(--text-secondary);
+}
+
+.assignments-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.filter-btn {
+  background: white;
+  border: 1px solid var(--border-card);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-btn:hover {
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+}
+.filter-btn.active {
+  background: var(--text-primary);
+  color: white;
+  border-color: var(--text-primary);
+}
+
+.assignments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+.assignment-card {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  border-top-width: 4px;
+  border-top-style: solid;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+.assignment-course {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.assignment-card h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.assignment-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  flex: 1;
+}
+.assignment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+.due-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.due-date.overdue {
+  color: var(--accent-red);
+  font-weight: 600;
+}
+.status-selector {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-card);
+  font-size: 0.8rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+.assignment-grade {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(20, 184, 166, 0.1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-teal);
+}
+"@
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+--- ACTION 24: COMMAND ---
+$cssContent = @"
+
+/* ============================================================
+   GRADEBOOK MODULE
+   ============================================================ */
+.gradebook-module {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  padding: 40px;
+}
+
+.gradebook-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.gradebook-header {
+  margin-bottom: 32px;
+}
+.gradebook-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.gradebook-header .subtitle {
+  color: var(--text-secondary);
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+.stat-card {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stat-info h3 {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.grades-table-container {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.grades-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.grades-table th {
+  background: var(--bg-sidebar);
+  text-align: left;
+  padding: 16px 24px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-card);
+}
+.grades-table td {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+}
+.grades-table tr:last-child td {
+  border-bottom: none;
+}
+.grades-table tr:hover {
+  background: var(--bg-primary);
+}
+.course-badge {
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+.font-medium {
+  font-weight: 500;
+}
+.grade-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+"@
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+--- ACTION 25: COMMAND ---
+$cssContent = @"
+
+/* ============================================================
+   FLASHCARDS MODULE
+   ============================================================ */
+.flashcards-module {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  padding: 40px;
+}
+.flashcards-module.center-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flashcards-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.flashcards-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 40px;
+}
+.flashcards-header h1 {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.flashcards-header .subtitle {
+  color: var(--text-secondary);
+}
+
+.decks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+}
+.deck-card {
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  border-top-width: 4px;
+  border-top-style: solid;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.deck-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.deck-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.deck-text h3 {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.deck-text p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.deck-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+.due-badge {
+  display: flex;
+  flex-direction: column;
+}
+.due-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.due-label {
+  font-size: 0.8rem;
+  color: var(--accent-red);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.start-review-btn {
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, filter 0.2s;
+}
+.start-review-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* Review Mode */
+.flashcards-module.review-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  background: var(--bg-primary);
+}
+.review-header {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+}
+.review-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+.review-progress {
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--border-light);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+.flashcard-container {
+  width: 100%;
+  max-width: 600px;
+  height: 400px;
+  perspective: 1000px;
+  cursor: pointer;
+  margin-bottom: 40px;
+}
+.flashcard {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flashcard.flipped {
+  transform: rotateX(180deg);
+}
+.flashcard-front, .flashcard-back {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  backface-visibility: hidden;
+  background: white;
+  border: 1px solid var(--border-card);
+  border-radius: 24px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  font-size: 1.5rem;
+  text-align: center;
+  color: var(--text-primary);
+}
+.flashcard-back {
+  transform: rotateX(180deg);
+  background: var(--bg-sidebar); /* slightly different background to indicate back */
+  border: 2px solid var(--accent-violet);
+}
+
+.review-controls {
+  width: 100%;
+  max-width: 600px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.rating-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+  color: white;
+}
+.rating-btn:hover {
+  transform: translateY(-4px);
+  filter: brightness(1.1);
+}
+.rating-btn .label {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+.rating-btn .sub {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+.rating-btn.again { background: var(--accent-red); }
+.rating-btn.hard { background: var(--accent-orange); }
+.rating-btn.good { background: var(--accent-teal); }
+.rating-btn.easy { background: var(--accent-blue); }
+
+.review-controls-placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+  height: 72px;
+  display: flex;
+  align-items: center;
+}
+"@
+Add-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent
+
+--- ACTION 26: COMMAND ---
+Get-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" | Select-String -Pattern "pomodoro-theme|short-break-theme|long-break-theme" -Context 5, 10
+
+--- ACTION 27: COMMAND ---
+Get-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" | Select-String -Pattern "break-theme" -Context 5, 20
+
+--- ACTION 28: COMMAND ---
+Get-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" | Select-String -Pattern "glow|animation|keyframes|box-shadow.*rgba" -Context 3, 3
+
+--- ACTION 29: COMMAND ---
+Get-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" | Select-String -Pattern "break-theme" -Context 3, 10
+
+--- ACTION 30: COMMAND ---
+Get-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" | Select-String -Pattern "timer-progress" -Context 3, 15
+
+--- ACTION 31: COMMAND ---
+$cssAnimations = @"
+
+@keyframes pomodoro-glow {
+  0% { box-shadow: 0 0 5px rgba(244, 63, 94, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(244, 63, 94, 0.6); }
+  100% { box-shadow: 0 0 5px rgba(244, 63, 94, 0.2); }
+}
+
+@keyframes break-glow {
+  0% { box-shadow: 0 0 5px rgba(20, 184, 166, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(20, 184, 166, 0.6); }
+  100% { box-shadow: 0 0 5px rgba(20, 184, 166, 0.2); }
+}
+
+.mode-btn.active.pomodoro-theme {
+  background: white;
+  color: var(--accent-red);
+  animation: pomodoro-glow 2s infinite ease-in-out;
+  border-color: var(--accent-red);
+}
+
+.mode-btn.active.break-theme {
+  background: white;
+  color: var(--accent-teal);
+  animation: break-glow 2s infinite ease-in-out;
+  border-color: var(--accent-teal);
+}
+
+.control-btn.primary.active-pomodoro {
+  animation: pomodoro-glow 2s infinite ease-in-out;
+}
+
+.control-btn.primary.active-break {
+  animation: break-glow 2s infinite ease-in-out;
+}
+"@
+
+$cssContent = Get-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Raw
+$cssContent = $cssContent -replace '(?s)\.mode-btn\.active\.pomodoro-theme \{.*?box-shadow: var\(--shadow-sm\);\r?\n  \}', ".mode-btn.active.pomodoro-theme {`n  background: white;`n  color: var(--accent-red);`n  animation: pomodoro-glow 2s infinite ease-in-out;`n}"
+$cssContent = $cssContent -replace '(?s)\.mode-btn\.active\.break-theme \{.*?box-shadow: var\(--shadow-sm\);\r?\n  \}', ".mode-btn.active.break-theme {`n  background: white;`n  color: var(--accent-teal);`n  animation: break-glow 2s infinite ease-in-out;`n}"
+$cssContent += $cssAnimations
+
+Set-Content -Path "C:\Users\proud\ORION\orion-ui\src\App.css" -Value $cssContent -NoNewline
+
+
+--- ACTION 32: COMMAND ---
+python "C:\Users\proud\.gemini\antigravity-ide\brain\b17881b6-c3cf-4f45-9147-6e0a0680a957\scratch\fix_color.py" "C:\Users\proud\ORION\orion-ui\src\App.css"
+
+--- ACTION 33: COMMAND ---
+Get-Content -Path C:\Users\proud\ORION\orion-ui\src\App.css | Select-String "command"
+
+--- ACTION 34: COMMAND ---
+Get-Content -Path C:\Users\proud\ORION\orion-ui\src\App.css | Select-String "command-orb"
+
+--- ACTION 35: COMMAND ---
+Get-Content -Path C:\Users\proud\ORION\orion-ui\src\App.css | Select-String "command-orb" | Select-Object LineNumber, Line
+
+--- ACTION 36: COMMAND ---
+git checkout src/App.css
+
+--- ACTION 37: COMMAND ---
+$historyPath = "$env:APPDATA\Code\User\History"
+Get-ChildItem -Path $historyPath -Recurse -Filter "entries.json" | Get-Content | Select-String "App.css" -Context 2,2 | Select-Object -First 10
+
+--- ACTION 38: REPLACE ---
+/* --- ORION CENTERED LAYOUT --- */
+.command-section {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.command-layout.vertical {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  display: none; /* Hide if we don't want it top-left anymore, or position absolute */
+}
+
+.command-main.centered-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+--- ACTION 39: REPLACE ---
+/* ============================================================
+   ORION — AI INTERACTION SPACE
+   ============================================================ */
+
+/* --- PAGE LAYOUT --- */
+.orion-module {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.orion-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+.orion-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  gap: 24px;
+}
+
+/* --- ORB ZONE (Centered focal point) --- */
+.orion-orb-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.orion-status-label {
+  margin-top: 18px;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+/* --- CONVERSATION AREA --- */
+.orion-conversation {
+  width: 100%;
+  max-width: 560px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.orion-placeholder {
+  color: var(--text-muted);
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  margin: auto 0;
+}
+
+.orion-msg {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.orion-msg-user {
+  background: rgba(37, 99, 235, 0.06);
+  align-self: flex-end;
+  max-width: 85%;
+  border: 1px solid rgba(37, 99, 235, 0.1);
+}
+
+.orion-msg-orion {
+  background: var(--bg-secondary);
+  align-self: flex-start;
+  max-width: 85%;
+  border: 1px solid var(--border-light);
+}
+
+.orion-msg-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent-primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.orion-msg p { margin: 0; }
+
+.orion-thinking-indicator {
+  opacity: 0.6;
+}
+
+/* --- ACTION BAR --- */
+.orion-action-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 10px;
+}
+
+.orion-mic-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border-radius: 50px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s var(--ease-spring);
+}
+
+.orion-mic-btn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+.orion-mic-btn.active {
+  border-color: var(--accent-primary);
+  background: rgba(37, 99, 235, 0.06);
+  color: var(--accent-primary);
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
+}
+
+.orion-mic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mic-icon { font-size: 1.1rem; }
+
+
+/* ============================================================
+   ORION ORB — VOLUMETRIC LIVING INTELLIGENCE
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .command-orb *, .command-orb {
+    animation: none !important;
+    transition-duration: 0.01s !important;
+  }
+}
+
+.orion-orb-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* --- THE SPHERE --- */
+.command-orb {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.3) 0%, rgba(186, 230, 253, 0.08) 60%, transparent 100%);
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.12),
+    0 8px 32px rgba(14, 165, 233, 0.12),
+    0 20px 60px rgba(37, 99, 235, 0.08);
+  overflow: hidden;
+}
+
+/* --- GLASS SHELL (outermost visual layer) --- */
+.orb-glass-shell {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, transparent 65%);
+  box-shadow:
+    inset 0 0 40px rgba(255, 255, 255, 0.5),
+    inset 0 -20px 50px rgba(14, 165, 233, 0.25),
+    inset -18px 0 35px rgba(255, 255, 255, 0.25),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.35);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* --- REFRACTION LAYER (mid-depth atmosphere) --- */
+.orb-refraction {
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 65% 35%, rgba(14, 165, 233, 0.35) 0%, rgba(56, 189, 248, 0.1) 40%, transparent 70%);
+  filter: blur(8px);
+  opacity: 0.7;
+  z-index: 3;
+  transition: all 4s ease-in-out;
+  animation: floatRefract 19s ease-in-out infinite alternate;
+}
+
+/* --- CORE (deep volumetric center) --- */
+.orb-core {
+  position: absolute;
+  width: 65%;
+  height: 65%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 45%, rgba(2, 132, 199, 0.85) 0%, rgba(14, 165, 233, 0.5) 35%, rgba(56, 189, 248, 0.15) 65%, transparent 85%);
+  filter: blur(14px);
+  opacity: 0.85;
+  z-index: 2;
+  transition: all 5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: coreDrift 29s ease-in-out infinite alternate;
+}
+
+/* --- ENERGY LAYER (sub-surface interaction) --- */
+.orb-energy {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  transition: all 2.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0;
+  z-index: 4;
+}
+
+
+/* ============================================================
+   EYES — ATTENTION LAYER
+   ============================================================ */
+
+.orb-eyes-container {
+  position: absolute;
+  display: flex;
+  gap: 20px;
+  z-index: 8;
+  transition: transform 0.12s linear;
+}
+
+.orb-eye {
+  width: 16px;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.85),
+    0 0 28px rgba(56, 189, 248, 0.45);
+  transition: all 0.4s cubic-bezier(0.3, 0.8, 0.2, 1);
+  transform-origin: center;
+  opacity: 0.92;
+}
+
+/* --- EYE MICRO-BEHAVIORS --- */
+.orb-eyes-container.eye-neutral .orb-eye { transform: scaleY(1); opacity: 0.92; }
+.orb-eyes-container.eye-focused .orb-eye { height: 8px; width: 18px; opacity: 1; box-shadow: 0 0 18px rgba(255, 255, 255, 0.95), 0 0 35px rgba(56, 189, 248, 0.5); }
+.orb-eyes-container.eye-attentive .orb-eye { width: 18px; transform: scaleY(1.2); }
+.orb-eyes-container.eye-blink-single .orb-eye { transform: scaleY(0); transition-duration: 0.1s; }
+.orb-eyes-container.eye-blink-slow .orb-eye { transform: scaleY(0.1); opacity: 0.5; transition-duration: 0.5s; }
+.orb-eyes-container.eye-squint-subtle .orb-eye { transform: scaleY(0.55); opacity: 0.75; }
+.orb-eyes-container.eye-widen-curious .orb-eye { transform: scaleY(1.5) scaleX(0.92); opacity: 1; }
+.orb-eyes-container.eye-glance-left { transform: translateX(-10px) !important; transition: transform 0.5s ease-out !important; }
+.orb-eyes-container.eye-glance-right { transform: translateX(10px) !important; transition: transform 0.5s ease-out !important; }
+.orb-eyes-container.eye-glance-up { transform: translateY(-8px) !important; transition: transform 0.5s ease-out !important; }
+.orb-eyes-container.eye-asymmetric-left .orb-eye.left { transform: scaleY(1.25); opacity: 1; }
+.orb-eyes-container.eye-asymmetric-left .orb-eye.right { transform: scaleY(0.6); opacity: 0.65; }
+.orb-eyes-container.eye-asymmetric-right .orb-eye.right { transform: scaleY(1.25); opacity: 1; }
+.orb-eyes-container.eye-asymmetric-right .orb-eye.left { transform: scaleY(0.6); opacity: 0.65; }
+.orb-eyes-container.eye-blink-offset .orb-eye.left { transform: scaleY(0); transition-duration: 0.1s; }
+.orb-eyes-container.eye-blink-offset .orb-eye.right { transform: scaleY(0); transition-delay: 0.06s; transition-duration: 0.1s; }
+.orb-eyes-container.eye-micro-dart { transform: translate(4px, -3px) !important; transition: transform 0.1s !important; }
+.orb-eyes-container.eye-focus-deep .orb-eye { width: 11px; transform: scaleY(0.8); opacity: 1; }
+.orb-eyes-container.eye-lost-focus .orb-eye { width: 22px; opacity: 0.4; filter: blur(2px); }
+.orb-eyes-container.eye-look-away { transform: translate(-14px, 6px) !important; transition: transform 0.8s cubic-bezier(0.4,0,0.2,1) !important; }
+
+
+/* ============================================================
+   CORE BEHAVIORS — PRESENCE ENGINE
+   ============================================================ */
+
+.command-orb.core-calm .orb-core { opacity: 0.7; transform: scale(1); }
+.command-orb.core-shift-deep .orb-core { opacity: 0.95; transform: scale(0.7); background: radial-gradient(circle at center, rgba(30, 64, 175, 0.9) 0%, rgba(37, 99, 235, 0.5) 60%, transparent 80%); }
+.command-orb.core-surge-subtle .orb-core { transform: scale(1.1); opacity: 0.85; }
+.command-orb.core-refract-edge .orb-refraction { opacity: 0.9; transform: translate(15px, -15px) scale(1.15); background: radial-gradient(ellipse at 80% 20%, rgba(56, 189, 248, 0.55) 0%, transparent 50%); }
+.command-orb.core-gather-light .orb-energy { opacity: 0.7; background: radial-gradient(circle at center, rgba(255, 255, 255, 0.35) 0%, transparent 45%); transform: scale(0.85); }
+.command-orb.core-disperse .orb-energy { opacity: 0.25; transform: scale(1.4); }
+.command-orb.core-breathe-micro .orb-core { transform: scale(1.04); transition-duration: 2.5s; }
+.command-orb.core-shadow-pass .orb-refraction { opacity: 0.15; transform: translate(-18px, 0); }
+.command-orb.core-energy-drift .orb-energy { opacity: 0.45; background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 50%); transform: rotate(15deg) translate(10px, 5px); }
+
+/* Eye-core sync: internal light responds when eyes notice something */
+.command-orb.core-eye-sync-surge .orb-energy {
+  opacity: 0.7;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.35) 0%, transparent 55%);
+  transform: scale(1.08);
+  transition-duration: 0.6s;
+}
+.command-orb.core-eye-sync-surge .orb-refraction {
+  opacity: 0.85;
+  filter: blur(4px);
+  transform: scale(1.1);
+}
+
+
+/* ============================================================
+   STATUS OVERRIDES — RECORDING / THINKING / SPEAKING
+   ============================================================ */
+
+/* RECORDING (Listening) */
+.command-orb.core-recording .orb-core {
+  animation: orbPulseListen 3s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(16, 185, 129, 0.85) 0%, rgba(5, 150, 105, 0.4) 50%, transparent 80%);
+}
+.command-orb.core-recording .orb-eyes-container { transform: translateY(6px) !important; }
+.command-orb.core-recording .orb-eye { width: 16px; height: 7px; box-shadow: 0 0 16px rgba(255, 255, 255, 0.9), 0 0 30px rgba(16, 185, 129, 0.4); }
+
+/* THINKING */
+.command-orb.core-thinking .orb-core {
+  animation: orbPulseThink 4s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.85) 0%, rgba(14, 165, 233, 0.4) 50%, transparent 80%);
+}
+.command-orb.core-thinking .orb-refraction { opacity: 0.8; animation: orbSpinRefract 7s linear infinite; }
+.command-orb.core-thinking .orb-eyes-container { gap: 14px; }
+.command-orb.core-thinking .orb-eye { width: 9px; transform: scaleY(0.7); opacity: 0.5; filter: blur(1.5px); }
+
+/* SPEAKING */
+.command-orb.core-speaking .orb-core {
+  animation: orbPulseSpeak 2.5s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.85) 0%, rgba(124, 58, 237, 0.4) 50%, transparent 80%);
+}
+.command-orb.core-speaking .orb-eyes-container { transform: translateY(-4px) !important; }
+.command-orb.core-speaking .orb-eye { width: 18px; transform: scaleY(1.1); filter: blur(0px); opacity: 0.95; }
+
+/* TRANSCRIBING */
+.command-orb.core-transcribing .orb-core {
+  animation: orbPulseThink 3s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(245, 158, 11, 0.7) 0%, rgba(217, 119, 6, 0.3) 50%, transparent 80%);
+}
+.command-orb.core-transcribing .orb-eye { opacity: 0.6; }
+
+
+/* ============================================================
+   KEYFRAME ANIMATIONS
+   ============================================================ */
+
+@keyframes floatRefract {
+  0%   { transform: translate(-6px, -4px) rotate(0deg) scale(0.95); opacity: 0.5; }
+  50%  { transform: translate(6px, 3px) rotate(8deg) scale(1.05); opacity: 0.75; }
+  100% { transform: translate(-3px, 7px) rotate(-4deg) scale(0.97); opacity: 0.45; }
+}
+
+@keyframes coreDrift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.7; }
+  33%  { transform: translate(8px, -5px) scale(0.92); opacity: 0.85; }
+  66%  { transform: translate(-7px, 6px) scale(1.08); opacity: 0.6; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.75; }
+}
+
+@keyframes orbSpinRefract {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes orbPulseThink {
+  0%, 100% { transform: scale(0.9); opacity: 0.65; }
+  50%      { transform: scale(0.96); opacity: 0.85; }
+}
+
+@keyframes orbPulseListen {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50%      { transform: scale(1.08); opacity: 0.9; }
+}
+
+@keyframes orbPulseSpeak {
+  0%, 100% { transform: scale(0.85); opacity: 0.6; filter: blur(14px); }
+  25%      { transform: scale(1.15); opacity: 0.95; filter: blur(8px); }
+  50%      { transform: scale(0.92); opacity: 0.75; filter: blur(12px); }
+  75%      { transform: scale(1.08); opacity: 0.85; filter: blur(10px); }
+}
+
+
+--- ACTION 40: REPLACE ---
+
+
+
+--- ACTION 41: COMMAND ---
+powershell -Command "$lines = Get-Content 'C:\Users\proud\ORION\orion-ui\src\App.css' -TotalCount 950; Set-Content 'C:\Users\proud\ORION\orion-ui\src\App.css' -Value $lines"
+
+--- ACTION 42: COMMAND ---
+python -c "p='C:/Users/proud/ORION/orion-ui/src/App.css'; f=open(p); lines=f.readlines(); f.close(); f=open(p,'w'); f.writelines(lines[:950]); f.close(); print(f'Truncated to {950} lines')"
+
+--- ACTION 43: COMMAND ---
+python -c "
+css = open('C:/Users/proud/ORION/orion-ui/src/App.css', 'r', encoding='utf-8').read()
+# Count braces
+opens = css.count('{')
+closes = css.count('}')
+print(f'Open braces: {opens}')
+print(f'Close braces: {closes}')
+print(f'Balance: {opens - closes}')
+
+# Find any orphaned properties (lines with : but no enclosing {})
+depth = 0
+for i, line in enumerate(css.split('\n'), 1):
+    depth += line.count('{') - line.count('}')
+    if depth < 0:
+        print(f'ERROR: Negative depth at line {i}: {line.strip()[:80]}')
+    if depth == 0 and ':' in line and not line.strip().startswith('/*') and not line.strip().startswith('@') and not line.strip().startswith(':root') and not line.strip().startswith('//') and line.strip():
+        if not line.strip().startswith('0%') and not line.strip().startswith('5') and not line.strip().startswith('2') and not line.strip().startswith('3') and not line.strip().startswith('6') and not line.strip().startswith('7') and not line.strip().startswith('1') and not line.strip().startswith('4') and not line.strip().startswith('8') and not line.strip().startswith('9') and '@import' not in line:
+            print(f'ORPHAN at line {i} (depth={depth}): {line.strip()[:80]}')
+print(f'Final depth: {depth}')
+"
+
+--- ACTION 44: REPLACE ---
+/* --- PAGE LAYOUT --- */
+.orion-module {
+  width: 100%;
+  min-height: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.orion-page {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+--- ACTION 45: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -Tail 70
+
+--- ACTION 46: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -Tail 150
+
+--- ACTION 47: REPLACE ---
+/* ==========================================================================
+   PAGE LAYOUT
+   ========================================================================== */
+
+/* --- PAGE LAYOUT --- */
+.orion-module {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.orion-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dark);
+}
+
+.orion-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  gap: 24px;
+}
+
+/* --- ORB ZONE (Centered focal point) --- */
+.orion-orb-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orion-orb-zone.compact {
+  transform: scale(0.65) translateY(-20px);
+}
+
+.orion-status-pill {
+  margin-top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orion-core);
+  box-shadow: 0 0 8px var(--orion-core);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* --- SUGGESTIONS --- */
+.orion-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  max-width: 600px;
+}
+
+.suggestion-chip {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.suggestion-chip:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.suggestion-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- CONVERSATION --- */
+.orion-conversation {
+  width: 100%;
+  max-width: 640px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 0;
+  scrollbar-width: none;
+}
+.orion-conversation::-webkit-scrollbar { display: none; }
+
+.orion-msg {
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  position: relative;
+  max-width: 85%;
+}
+
+.orion-msg-user {
+  background: rgba(255, 255, 255, 0.05);
+  align-self: flex-end;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.orion-msg-orion {
+  background: transparent;
+  align-self: flex-start;
+  color: var(--text-primary);
+}
+
+.orion-msg-accent {
+  position: absolute;
+  left: -12px;
+  top: 18px;
+  width: 4px;
+  height: 16px;
+  background: var(--orion-core);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--orion-core);
+}
+
+.msg-enter {
+  animation: msg-slide-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+@keyframes msg-slide-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: 24px;
+}
+.thinking-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  animation: thinking-bounce 1.4s infinite ease-in-out both;
+}
+.thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes thinking-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.orion-error {
+  align-self: center;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+/* --- INPUT BAR --- */
+.orion-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  border-radius: 30px;
+  transition: border-color 0.3s;
+}
+.orion-input-bar:focus-within {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.orion-text-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  padding: 8px 16px;
+  outline: none;
+  font-family: inherit;
+}
+.orion-text-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+.orion-text-input:disabled { opacity: 0.5; }
+
+.orion-send-btn, .orion-mic-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+.orion-send-btn:hover:not(:disabled), .orion-mic-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+.orion-send-btn:disabled, .orion-mic-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.orion-send-btn { background: var(--orion-core); color: #0f172a; }
+.orion-send-btn:hover:not(:disabled) { background: #22d3ee; }
+
+.orion-mic-btn.recording {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  animation: mic-pulse 1.5s infinite;
+}
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+--- ACTION 48: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -Tail 15
+
+--- ACTION 49: REPLACE ---
+.orion-mic-btn.recording {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  animation: mic-pulse 1.5s infinite;
+}
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ============================================================
+   APP SHELL & SIDEBAR
+   ============================================================ */
+.app-root {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.app-sidebar {
+  width: 260px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.sidebar-brand {
+  margin-bottom: 40px;
+  padding: 0 12px;
+}
+
+.sidebar-brand h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sidebar-section {
+  margin-bottom: 32px;
+}
+
+.sidebar-section.bottom {
+  margin-top: auto;
+  margin-bottom: 0;
+}
+
+.sidebar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--accent-violet);
+}
+
+.nav-item.active {
+  background: white;
+  color: var(--accent-violet);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+
+.app-content {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Adjust dashboard layout to fit inside app-content */
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder-view {
+  padding: 60px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+--- ACTION 50: COMMAND ---
+python -c "
+import json
+
+app_css_content = None
+
+with open(r'C:\Users\proud\.gemini\antigravity-ide\brain\b17881b6-c3cf-4f45-9147-6e0a0680a957\.system_generated\logs\transcript_full.jsonl', 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if data.get('type') == 'PLANNER_RESPONSE':
+                for tool in data.get('tool_calls', []):
+                    if tool['name'] == 'write_to_file' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        app_css_content = tool['args']['CodeContent']
+                    elif tool['name'] == 'replace_file_content' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        pass # Ignore replaces for now, or just print that they happened
+        except Exception as e:
+            pass
+
+with open('extracted_app_css.txt', 'w', encoding='utf-8') as out:
+    out.write(app_css_content if app_css_content else 'NOT FOUND')
+"
+
+--- ACTION 51: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css
+
+--- ACTION 52: COMMAND ---
+python -c "
+import re
+
+with open('extracted_app_css.txt', 'r', encoding='utf-8') as f:
+    old_css = f.read()
+
+with open('src/App.css', 'r', encoding='utf-8') as f:
+    current_css = f.read()
+
+# 1. Get Light Theme variables and all layout from old_css up to the Orb
+part1 = old_css.split('/* ============================================================\n   STATUS & ORB\n   ============================================================ */')[0]
+
+# 2. Extract the NEW ORION ORB Particle Field from current_css
+# It starts at '/* ==========================================================================\n   ORION ORB — LIVING INTELLIGENCE FIELD'
+# and ends right before '/* ==========================================================================\n   PAGE LAYOUT'
+orb_match = re.search(r'(/\* ==========================================================================\n   ORION ORB — LIVING INTELLIGENCE FIELD.*?\n)(?=/\* ==========================================================================\n   PAGE LAYOUT)', current_css, re.DOTALL)
+orb_css = orb_match.group(1) if orb_match else ''
+
+# 3. Extract the NEW PAGE LAYOUT from current_css (which styles the conversation, input bar, etc.)
+# It starts at '/* ==========================================================================\n   PAGE LAYOUT'
+# and ends right before '/* ============================================================\n   APP SHELL & SIDEBAR'
+layout_match = re.search(r'(/\* ==========================================================================\n   PAGE LAYOUT.*?\n)(?=/\* ============================================================\n   APP SHELL & SIDEBAR)', current_css, re.DOTALL)
+new_layout_css = layout_match.group(1) if layout_match else ''
+
+# Fix dark theme hardcodes in the new layout css
+new_layout_css = new_layout_css.replace('var(--bg-dark)', 'transparent')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.05)', 'rgba(0, 0, 0, 0.05)')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.1)')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.2)', 'rgba(0, 0, 0, 0.2)')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.3)', 'rgba(0, 0, 0, 0.3)')
+new_layout_css = new_layout_css.replace('border: 1px solid rgba(255, 255, 255, 0.08);', 'border: 1px solid rgba(0, 0, 0, 0.08);')
+new_layout_css = new_layout_css.replace('color: #fff;', 'color: var(--text-primary);')
+new_layout_css = new_layout_css.replace('color: white;', 'color: var(--text-primary);')
+
+# 4. Get the rest of old_css (Sidebar Transcript, Mic Button, Mini Vault)
+# Wait, the new page layout replaces the old transcript and mic button.
+# Let's see if we need the Mini Vault. The Mini Vault is in old_css.
+mini_vault_match = re.search(r'(/\* ============================================================\n   MINI VAULT.*)', old_css, re.DOTALL)
+mini_vault_css = mini_vault_match.group(1) if mini_vault_match else ''
+
+# Let's also include the APP SHELL & SIDEBAR from current_css end just in case old_css missed it? 
+# old_css doesn't have .app-root and .app-sidebar! It has .dashboard-layout.
+# But wait, in step 932, .app-root and .app-sidebar WERE added!
+# Let's grab them from the end of current_css!
+app_shell_match = re.search(r'(/\* ============================================================\n   APP SHELL & SIDEBAR.*)', current_css, re.DOTALL)
+app_shell_css = app_shell_match.group(1) if app_shell_match else ''
+
+
+final_css = part1 + '\n\n' + orb_css + '\n\n' + new_layout_css + '\n\n' + mini_vault_css + '\n\n' + app_shell_css
+
+with open('src/App.css', 'w', encoding='utf-8') as f:
+    f.write(final_css)
+print('Merged successfully!')
+"
+
+--- ACTION 53: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -TotalCount 70
+
+--- ACTION 54: COMMAND ---
+python -c "
+import json
+import re
+
+last_viewed_css = None
+with open(r'C:\Users\proud\.gemini\antigravity-ide\brain\b17881b6-c3cf-4f45-9147-6e0a0680a957\.system_generated\logs\transcript_full.jsonl', 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if data.get('type') == 'VIEW_FILE' and data.get('status') == 'DONE':
+                content = data.get('content', '')
+                if 'File Path: `file:///C:/Users/proud/ORION/orion-ui/src/App.css`' in content:
+                    # check if the content contains the full file or enough of it
+                    last_viewed_css = content
+        except Exception as e:
+            pass
+
+with open('last_viewed_css.txt', 'w', encoding='utf-8') as out:
+    out.write(last_viewed_css if last_viewed_css else 'NOT FOUND')
+"
+
+--- ACTION 55: COMMAND ---
+python -c "
+import json
+import re
+
+history = []
+
+with open(r'C:\Users\proud\.gemini\antigravity-ide\brain\b17881b6-c3cf-4f45-9147-6e0a0680a957\.system_generated\logs\transcript_full.jsonl', 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if data.get('type') == 'PLANNER_RESPONSE':
+                for tool in data.get('tool_calls', []):
+                    # write_to_file
+                    if tool['name'] == 'write_to_file' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        if tool['args'].get('Overwrite'):
+                            history.append(('OVERWRITE', tool['args']['CodeContent']))
+                    
+                    # replace_file_content
+                    elif tool['name'] == 'replace_file_content' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        history.append(('REPLACE', tool['args'].get('ReplacementContent', '')))
+                        
+                    # run_command
+                    elif tool['name'] == 'run_command':
+                        cmd = tool['args'].get('CommandLine', '')
+                        if 'App.css' in cmd:
+                            history.append(('COMMAND', cmd))
+        except Exception as e:
+            pass
+
+with open('css_history.txt', 'w', encoding='utf-8') as out:
+    for i, (action, content) in enumerate(history):
+        out.write(f'--- ACTION {i}: {action} ---\n')
+        out.write(content + '\n\n')
+"
+

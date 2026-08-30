@@ -1,0 +1,4 @@
+{i}: {action} ---\n')
+        out.write(content + '\n\n')
+"
+

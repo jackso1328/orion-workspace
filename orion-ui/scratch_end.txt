@@ -1,0 +1,1000 @@
+}
+
+.command-layout.vertical {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  display: none; /* Hide if we don't want it top-left anymore, or position absolute */
+}
+
+.command-main.centered-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+--- ACTION 39: REPLACE ---
+/* ============================================================
+   ORION — AI INTERACTION SPACE
+   ============================================================ */
+
+/* --- PAGE LAYOUT --- */
+.orion-module {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.orion-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+.orion-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  gap: 24px;
+}
+
+/* --- ORB ZONE (Centered focal point) --- */
+.orion-orb-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.orion-status-label {
+  margin-top: 18px;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+/* --- CONVERSATION AREA --- */
+.orion-conversation {
+  width: 100%;
+  max-width: 560px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.orion-placeholder {
+  color: var(--text-muted);
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  margin: auto 0;
+}
+
+.orion-msg {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.orion-msg-user {
+  background: rgba(37, 99, 235, 0.06);
+  align-self: flex-end;
+  max-width: 85%;
+  border: 1px solid rgba(37, 99, 235, 0.1);
+}
+
+.orion-msg-orion {
+  background: var(--bg-secondary);
+  align-self: flex-start;
+  max-width: 85%;
+  border: 1px solid var(--border-light);
+}
+
+.orion-msg-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent-primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.orion-msg p { margin: 0; }
+
+.orion-thinking-indicator {
+  opacity: 0.6;
+}
+
+/* --- ACTION BAR --- */
+.orion-action-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 10px;
+}
+
+.orion-mic-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border-radius: 50px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s var(--ease-spring);
+}
+
+.orion-mic-btn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+.orion-mic-btn.active {
+  border-color: var(--accent-primary);
+  background: rgba(37, 99, 235, 0.06);
+  color: var(--accent-primary);
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
+}
+
+.orion-mic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mic-icon { font-size: 1.1rem; }
+
+
+/* ============================================================
+   ORION ORB — VOLUMETRIC LIVING INTELLIGENCE
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .command-orb *, .command-orb {
+    animation: none !important;
+    transition-duration: 0.01s !important;
+  }
+}
+
+.orion-orb-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* --- THE SPHERE --- */
+.command-orb {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 50%, rgba(224, 242, 254, 0.3) 0%, rgba(186, 230, 253, 0.08) 60%, transparent 100%);
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.12),
+    0 8px 32px rgba(14, 165, 233, 0.12),
+    0 20px 60px rgba(37, 99, 235, 0.08);
+  overflow: hidden;
+}
+
+/* --- GLASS SHELL (outermost visual layer) --- */
+.orb-glass-shell {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, transparent 65%);
+  box-shadow:
+    inset 0 0 40px rgba(255, 255, 255, 0.5),
+    inset 0 -20px 50px rgba(14, 165, 233, 0.25),
+    inset -18px 0 35px rgba(255, 255, 255, 0.25),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.35);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* --- REFRACTION LAYER (mid-depth atmosphere) --- */
+.orb-refraction {
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 65% 35%, rgba(14, 165, 233, 0.35) 0%, rgba(56, 189, 248, 0.1) 40%, transparent 70%);
+  filter: blur(8px);
+  opacity: 0.7;
+  z-index: 3;
+  transition: all 4s ease-in-out;
+  animation: floatRefract 19s ease-in-out infinite alternate;
+}
+
+/* --- CORE (deep volumetric center) --- */
+.orb-core {
+  position: absolute;
+  width: 65%;
+  height: 65%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 45%, rgba(2, 132, 199, 0.85) 0%, rgba(14, 165, 233, 0.5) 35%, rgba(56, 189, 248, 0.15) 65%, transparent 85%);
+  filter: blur(14px);
+  opacity: 0.85;
+  z-index: 2;
+  transition: all 5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: coreDrift 29s ease-in-out infinite alternate;
+}
+
+/* --- ENERGY LAYER (sub-surface interaction) --- */
+.orb-energy {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  transition: all 2.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0;
+  z-index: 4;
+}
+
+
+/* ============================================================
+   EYES — ATTENTION LAYER
+   ============================================================ */
+
+.orb-eyes-container {
+  position: absolute;
+  display: flex;
+  gap: 20px;
+  z-index: 8;
+  transition: transform 0.12s linear;
+}
+
+.orb-eye {
+  width: 16px;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.85),
+    0 0 28px rgba(56, 189, 248, 0.45);
+  transition: all 0.4s cubic-bezier(0.3, 0.8, 0.2, 1);
+  transform-origin: center;
+  opacity: 0.92;
+}
+
+/* --- EYE MICRO-BEHAVIORS --- */
+.orb-eyes-container.eye-neutral .orb-eye { transform: scaleY(1); opacity: 0.92; }
+.orb-eyes-container.eye-focused .orb-eye { height: 8px; width: 18px; opacity: 1; box-shadow: 0 0 18px rgba(255, 255, 255, 0.95), 0 0 35px rgba(56, 189, 248, 0.5); }
+.orb-eyes-container.eye-attentive .orb-eye { width: 18px; transform: scaleY(1.2); }
+.orb-eyes-container.eye-blink-single .orb-eye { transform: scaleY(0); transition-duration: 0.1s; }
+.orb-eyes-container.eye-blink-slow .orb-eye { transform: scaleY(0.1); opacity: 0.5; transition-duration: 0.5s; }
+.orb-eyes-container.eye-squint-subtle .orb-eye { transform: scaleY(0.55); opacity: 0.75; }
+.orb-eyes-container.eye-widen-curious .orb-eye { transform: scaleY(1.5) scaleX(0.92); opacity: 1; }
+.orb-eyes-container.eye-glance-left { transform: translateX(-10px) !important; transition: transform 0.5s ease-out !important; }
+.orb-eyes-container.eye-glance-right { transform: translateX(10px) !important; transition: transform 0.5s ease-out !important; }
+.orb-eyes-container.eye-glance-up { transform: translateY(-8px) !important; transition: transform 0.5s ease-out !important; }
+.orb-eyes-container.eye-asymmetric-left .orb-eye.left { transform: scaleY(1.25); opacity: 1; }
+.orb-eyes-container.eye-asymmetric-left .orb-eye.right { transform: scaleY(0.6); opacity: 0.65; }
+.orb-eyes-container.eye-asymmetric-right .orb-eye.right { transform: scaleY(1.25); opacity: 1; }
+.orb-eyes-container.eye-asymmetric-right .orb-eye.left { transform: scaleY(0.6); opacity: 0.65; }
+.orb-eyes-container.eye-blink-offset .orb-eye.left { transform: scaleY(0); transition-duration: 0.1s; }
+.orb-eyes-container.eye-blink-offset .orb-eye.right { transform: scaleY(0); transition-delay: 0.06s; transition-duration: 0.1s; }
+.orb-eyes-container.eye-micro-dart { transform: translate(4px, -3px) !important; transition: transform 0.1s !important; }
+.orb-eyes-container.eye-focus-deep .orb-eye { width: 11px; transform: scaleY(0.8); opacity: 1; }
+.orb-eyes-container.eye-lost-focus .orb-eye { width: 22px; opacity: 0.4; filter: blur(2px); }
+.orb-eyes-container.eye-look-away { transform: translate(-14px, 6px) !important; transition: transform 0.8s cubic-bezier(0.4,0,0.2,1) !important; }
+
+
+/* ============================================================
+   CORE BEHAVIORS — PRESENCE ENGINE
+   ============================================================ */
+
+.command-orb.core-calm .orb-core { opacity: 0.7; transform: scale(1); }
+.command-orb.core-shift-deep .orb-core { opacity: 0.95; transform: scale(0.7); background: radial-gradient(circle at center, rgba(30, 64, 175, 0.9) 0%, rgba(37, 99, 235, 0.5) 60%, transparent 80%); }
+.command-orb.core-surge-subtle .orb-core { transform: scale(1.1); opacity: 0.85; }
+.command-orb.core-refract-edge .orb-refraction { opacity: 0.9; transform: translate(15px, -15px) scale(1.15); background: radial-gradient(ellipse at 80% 20%, rgba(56, 189, 248, 0.55) 0%, transparent 50%); }
+.command-orb.core-gather-light .orb-energy { opacity: 0.7; background: radial-gradient(circle at center, rgba(255, 255, 255, 0.35) 0%, transparent 45%); transform: scale(0.85); }
+.command-orb.core-disperse .orb-energy { opacity: 0.25; transform: scale(1.4); }
+.command-orb.core-breathe-micro .orb-core { transform: scale(1.04); transition-duration: 2.5s; }
+.command-orb.core-shadow-pass .orb-refraction { opacity: 0.15; transform: translate(-18px, 0); }
+.command-orb.core-energy-drift .orb-energy { opacity: 0.45; background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 50%); transform: rotate(15deg) translate(10px, 5px); }
+
+/* Eye-core sync: internal light responds when eyes notice something */
+.command-orb.core-eye-sync-surge .orb-energy {
+  opacity: 0.7;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.35) 0%, transparent 55%);
+  transform: scale(1.08);
+  transition-duration: 0.6s;
+}
+.command-orb.core-eye-sync-surge .orb-refraction {
+  opacity: 0.85;
+  filter: blur(4px);
+  transform: scale(1.1);
+}
+
+
+/* ============================================================
+   STATUS OVERRIDES — RECORDING / THINKING / SPEAKING
+   ============================================================ */
+
+/* RECORDING (Listening) */
+.command-orb.core-recording .orb-core {
+  animation: orbPulseListen 3s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(16, 185, 129, 0.85) 0%, rgba(5, 150, 105, 0.4) 50%, transparent 80%);
+}
+.command-orb.core-recording .orb-eyes-container { transform: translateY(6px) !important; }
+.command-orb.core-recording .orb-eye { width: 16px; height: 7px; box-shadow: 0 0 16px rgba(255, 255, 255, 0.9), 0 0 30px rgba(16, 185, 129, 0.4); }
+
+/* THINKING */
+.command-orb.core-thinking .orb-core {
+  animation: orbPulseThink 4s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.85) 0%, rgba(14, 165, 233, 0.4) 50%, transparent 80%);
+}
+.command-orb.core-thinking .orb-refraction { opacity: 0.8; animation: orbSpinRefract 7s linear infinite; }
+.command-orb.core-thinking .orb-eyes-container { gap: 14px; }
+.command-orb.core-thinking .orb-eye { width: 9px; transform: scaleY(0.7); opacity: 0.5; filter: blur(1.5px); }
+
+/* SPEAKING */
+.command-orb.core-speaking .orb-core {
+  animation: orbPulseSpeak 2.5s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.85) 0%, rgba(124, 58, 237, 0.4) 50%, transparent 80%);
+}
+.command-orb.core-speaking .orb-eyes-container { transform: translateY(-4px) !important; }
+.command-orb.core-speaking .orb-eye { width: 18px; transform: scaleY(1.1); filter: blur(0px); opacity: 0.95; }
+
+/* TRANSCRIBING */
+.command-orb.core-transcribing .orb-core {
+  animation: orbPulseThink 3s infinite ease-in-out;
+  background: radial-gradient(circle at center, rgba(245, 158, 11, 0.7) 0%, rgba(217, 119, 6, 0.3) 50%, transparent 80%);
+}
+.command-orb.core-transcribing .orb-eye { opacity: 0.6; }
+
+
+/* ============================================================
+   KEYFRAME ANIMATIONS
+   ============================================================ */
+
+@keyframes floatRefract {
+  0%   { transform: translate(-6px, -4px) rotate(0deg) scale(0.95); opacity: 0.5; }
+  50%  { transform: translate(6px, 3px) rotate(8deg) scale(1.05); opacity: 0.75; }
+  100% { transform: translate(-3px, 7px) rotate(-4deg) scale(0.97); opacity: 0.45; }
+}
+
+@keyframes coreDrift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.7; }
+  33%  { transform: translate(8px, -5px) scale(0.92); opacity: 0.85; }
+  66%  { transform: translate(-7px, 6px) scale(1.08); opacity: 0.6; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.75; }
+}
+
+@keyframes orbSpinRefract {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes orbPulseThink {
+  0%, 100% { transform: scale(0.9); opacity: 0.65; }
+  50%      { transform: scale(0.96); opacity: 0.85; }
+}
+
+@keyframes orbPulseListen {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50%      { transform: scale(1.08); opacity: 0.9; }
+}
+
+@keyframes orbPulseSpeak {
+  0%, 100% { transform: scale(0.85); opacity: 0.6; filter: blur(14px); }
+  25%      { transform: scale(1.15); opacity: 0.95; filter: blur(8px); }
+  50%      { transform: scale(0.92); opacity: 0.75; filter: blur(12px); }
+  75%      { transform: scale(1.08); opacity: 0.85; filter: blur(10px); }
+}
+
+
+--- ACTION 40: REPLACE ---
+
+
+
+--- ACTION 41: COMMAND ---
+powershell -Command "$lines = Get-Content 'C:\Users\proud\ORION\orion-ui\src\App.css' -TotalCount 950; Set-Content 'C:\Users\proud\ORION\orion-ui\src\App.css' -Value $lines"
+
+--- ACTION 42: COMMAND ---
+python -c "p='C:/Users/proud/ORION/orion-ui/src/App.css'; f=open(p); lines=f.readlines(); f.close(); f=open(p,'w'); f.writelines(lines[:950]); f.close(); print(f'Truncated to {950} lines')"
+
+--- ACTION 43: COMMAND ---
+python -c "
+css = open('C:/Users/proud/ORION/orion-ui/src/App.css', 'r', encoding='utf-8').read()
+# Count braces
+opens = css.count('{')
+closes = css.count('}')
+print(f'Open braces: {opens}')
+print(f'Close braces: {closes}')
+print(f'Balance: {opens - closes}')
+
+# Find any orphaned properties (lines with : but no enclosing {})
+depth = 0
+for i, line in enumerate(css.split('\n'), 1):
+    depth += line.count('{') - line.count('}')
+    if depth < 0:
+        print(f'ERROR: Negative depth at line {i}: {line.strip()[:80]}')
+    if depth == 0 and ':' in line and not line.strip().startswith('/*') and not line.strip().startswith('@') and not line.strip().startswith(':root') and not line.strip().startswith('//') and line.strip():
+        if not line.strip().startswith('0%') and not line.strip().startswith('5') and not line.strip().startswith('2') and not line.strip().startswith('3') and not line.strip().startswith('6') and not line.strip().startswith('7') and not line.strip().startswith('1') and not line.strip().startswith('4') and not line.strip().startswith('8') and not line.strip().startswith('9') and '@import' not in line:
+            print(f'ORPHAN at line {i} (depth={depth}): {line.strip()[:80]}')
+print(f'Final depth: {depth}')
+"
+
+--- ACTION 44: REPLACE ---
+/* --- PAGE LAYOUT --- */
+.orion-module {
+  width: 100%;
+  min-height: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.orion-page {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+--- ACTION 45: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -Tail 70
+
+--- ACTION 46: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -Tail 150
+
+--- ACTION 47: REPLACE ---
+/* ==========================================================================
+   PAGE LAYOUT
+   ========================================================================== */
+
+/* --- PAGE LAYOUT --- */
+.orion-module {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.orion-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-dark);
+}
+
+.orion-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  gap: 24px;
+}
+
+/* --- ORB ZONE (Centered focal point) --- */
+.orion-orb-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.orion-orb-zone.compact {
+  transform: scale(0.65) translateY(-20px);
+}
+
+.orion-status-pill {
+  margin-top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orion-core);
+  box-shadow: 0 0 8px var(--orion-core);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* --- SUGGESTIONS --- */
+.orion-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  max-width: 600px;
+}
+
+.suggestion-chip {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.suggestion-chip:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.suggestion-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- CONVERSATION --- */
+.orion-conversation {
+  width: 100%;
+  max-width: 640px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 0;
+  scrollbar-width: none;
+}
+.orion-conversation::-webkit-scrollbar { display: none; }
+
+.orion-msg {
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  position: relative;
+  max-width: 85%;
+}
+
+.orion-msg-user {
+  background: rgba(255, 255, 255, 0.05);
+  align-self: flex-end;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.orion-msg-orion {
+  background: transparent;
+  align-self: flex-start;
+  color: var(--text-primary);
+}
+
+.orion-msg-accent {
+  position: absolute;
+  left: -12px;
+  top: 18px;
+  width: 4px;
+  height: 16px;
+  background: var(--orion-core);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--orion-core);
+}
+
+.msg-enter {
+  animation: msg-slide-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+@keyframes msg-slide-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.thinking-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  height: 24px;
+}
+.thinking-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  animation: thinking-bounce 1.4s infinite ease-in-out both;
+}
+.thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes thinking-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.orion-error {
+  align-self: center;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+/* --- INPUT BAR --- */
+.orion-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  border-radius: 30px;
+  transition: border-color 0.3s;
+}
+.orion-input-bar:focus-within {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.orion-text-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  padding: 8px 16px;
+  outline: none;
+  font-family: inherit;
+}
+.orion-text-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+.orion-text-input:disabled { opacity: 0.5; }
+
+.orion-send-btn, .orion-mic-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+.orion-send-btn:hover:not(:disabled), .orion-mic-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+.orion-send-btn:disabled, .orion-mic-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.orion-send-btn { background: var(--orion-core); color: #0f172a; }
+.orion-send-btn:hover:not(:disabled) { background: #22d3ee; }
+
+.orion-mic-btn.recording {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  animation: mic-pulse 1.5s infinite;
+}
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+--- ACTION 48: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -Tail 15
+
+--- ACTION 49: REPLACE ---
+.orion-mic-btn.recording {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  animation: mic-pulse 1.5s infinite;
+}
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ============================================================
+   APP SHELL & SIDEBAR
+   ============================================================ */
+.app-root {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.app-sidebar {
+  width: 260px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.sidebar-brand {
+  margin-bottom: 40px;
+  padding: 0 12px;
+}
+
+.sidebar-brand h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sidebar-section {
+  margin-bottom: 32px;
+}
+
+.sidebar-section.bottom {
+  margin-top: auto;
+  margin-bottom: 0;
+}
+
+.sidebar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--accent-violet);
+}
+
+.nav-item.active {
+  background: white;
+  color: var(--accent-violet);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+
+.app-content {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Adjust dashboard layout to fit inside app-content */
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder-view {
+  padding: 60px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+--- ACTION 50: COMMAND ---
+python -c "
+import json
+
+app_css_content = None
+
+with open(r'C:\Users\proud\.gemini\antigravity-ide\brain\b17881b6-c3cf-4f45-9147-6e0a0680a957\.system_generated\logs\transcript_full.jsonl', 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if data.get('type') == 'PLANNER_RESPONSE':
+                for tool in data.get('tool_calls', []):
+                    if tool['name'] == 'write_to_file' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        app_css_content = tool['args']['CodeContent']
+                    elif tool['name'] == 'replace_file_content' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        pass # Ignore replaces for now, or just print that they happened
+        except Exception as e:
+            pass
+
+with open('extracted_app_css.txt', 'w', encoding='utf-8') as out:
+    out.write(app_css_content if app_css_content else 'NOT FOUND')
+"
+
+--- ACTION 51: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css
+
+--- ACTION 52: COMMAND ---
+python -c "
+import re
+
+with open('extracted_app_css.txt', 'r', encoding='utf-8') as f:
+    old_css = f.read()
+
+with open('src/App.css', 'r', encoding='utf-8') as f:
+    current_css = f.read()
+
+# 1. Get Light Theme variables and all layout from old_css up to the Orb
+part1 = old_css.split('/* ============================================================\n   STATUS & ORB\n   ============================================================ */')[0]
+
+# 2. Extract the NEW ORION ORB Particle Field from current_css
+# It starts at '/* ==========================================================================\n   ORION ORB — LIVING INTELLIGENCE FIELD'
+# and ends right before '/* ==========================================================================\n   PAGE LAYOUT'
+orb_match = re.search(r'(/\* ==========================================================================\n   ORION ORB — LIVING INTELLIGENCE FIELD.*?\n)(?=/\* ==========================================================================\n   PAGE LAYOUT)', current_css, re.DOTALL)
+orb_css = orb_match.group(1) if orb_match else ''
+
+# 3. Extract the NEW PAGE LAYOUT from current_css (which styles the conversation, input bar, etc.)
+# It starts at '/* ==========================================================================\n   PAGE LAYOUT'
+# and ends right before '/* ============================================================\n   APP SHELL & SIDEBAR'
+layout_match = re.search(r'(/\* ==========================================================================\n   PAGE LAYOUT.*?\n)(?=/\* ============================================================\n   APP SHELL & SIDEBAR)', current_css, re.DOTALL)
+new_layout_css = layout_match.group(1) if layout_match else ''
+
+# Fix dark theme hardcodes in the new layout css
+new_layout_css = new_layout_css.replace('var(--bg-dark)', 'transparent')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.05)', 'rgba(0, 0, 0, 0.05)')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.1)')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.2)', 'rgba(0, 0, 0, 0.2)')
+new_layout_css = new_layout_css.replace('rgba(255, 255, 255, 0.3)', 'rgba(0, 0, 0, 0.3)')
+new_layout_css = new_layout_css.replace('border: 1px solid rgba(255, 255, 255, 0.08);', 'border: 1px solid rgba(0, 0, 0, 0.08);')
+new_layout_css = new_layout_css.replace('color: #fff;', 'color: var(--text-primary);')
+new_layout_css = new_layout_css.replace('color: white;', 'color: var(--text-primary);')
+
+# 4. Get the rest of old_css (Sidebar Transcript, Mic Button, Mini Vault)
+# Wait, the new page layout replaces the old transcript and mic button.
+# Let's see if we need the Mini Vault. The Mini Vault is in old_css.
+mini_vault_match = re.search(r'(/\* ============================================================\n   MINI VAULT.*)', old_css, re.DOTALL)
+mini_vault_css = mini_vault_match.group(1) if mini_vault_match else ''
+
+# Let's also include the APP SHELL & SIDEBAR from current_css end just in case old_css missed it? 
+# old_css doesn't have .app-root and .app-sidebar! It has .dashboard-layout.
+# But wait, in step 932, .app-root and .app-sidebar WERE added!
+# Let's grab them from the end of current_css!
+app_shell_match = re.search(r'(/\* ============================================================\n   APP SHELL & SIDEBAR.*)', current_css, re.DOTALL)
+app_shell_css = app_shell_match.group(1) if app_shell_match else ''
+
+
+final_css = part1 + '\n\n' + orb_css + '\n\n' + new_layout_css + '\n\n' + mini_vault_css + '\n\n' + app_shell_css
+
+with open('src/App.css', 'w', encoding='utf-8') as f:
+    f.write(final_css)
+print('Merged successfully!')
+"
+
+--- ACTION 53: COMMAND ---
+Get-Content C:\Users\proud\ORION\orion-ui\src\App.css -TotalCount 70
+
+--- ACTION 54: COMMAND ---
+python -c "
+import json
+import re
+
+last_viewed_css = None
+with open(r'C:\Users\proud\.gemini\antigravity-ide\brain\b17881b6-c3cf-4f45-9147-6e0a0680a957\.system_generated\logs\transcript_full.jsonl', 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if data.get('type') == 'VIEW_FILE' and data.get('status') == 'DONE':
+                content = data.get('content', '')
+                if 'File Path: `file:///C:/Users/proud/ORION/orion-ui/src/App.css`' in content:
+                    # check if the content contains the full file or enough of it
+                    last_viewed_css = content
+        except Exception as e:
+            pass
+
+with open('last_viewed_css.txt', 'w', encoding='utf-8') as out:
+    out.write(last_viewed_css if last_viewed_css else 'NOT FOUND')
+"
+
+--- ACTION 55: COMMAND ---
+python -c "
+import json
+import re
+
+history = []
+
+with open(r'C:\Users\proud\.gemini\antigravity-ide\brain\b17881b6-c3cf-4f45-9147-6e0a0680a957\.system_generated\logs\transcript_full.jsonl', 'r', encoding='utf-8') as f:
+    for line in f:
+        try:
+            data = json.loads(line)
+            if data.get('type') == 'PLANNER_RESPONSE':
+                for tool in data.get('tool_calls', []):
+                    # write_to_file
+                    if tool['name'] == 'write_to_file' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        if tool['args'].get('Overwrite'):
+                            history.append(('OVERWRITE', tool['args']['CodeContent']))
+                    
+                    # replace_file_content
+                    elif tool['name'] == 'replace_file_content' and 'App.css' in tool['args'].get('TargetFile', ''):
+                        history.append(('REPLACE', tool['args'].get('ReplacementContent', '')))
+                        
+                    # run_command
+                    elif tool['name'] == 'run_command':
+                        cmd = tool['args'].get('CommandLine', '')
+                        if 'App.css' in cmd:
+                            history.append(('COMMAND', cmd))
+        except Exception as e:
+            pass
+
+with open('css_history.txt', 'w', encoding='utf-8') as out:
+    for i, (action, content) in enumerate(history):
+        out.write(f'--- ACTION {i}: {action} ---\n')
+        out.write(content + '\n\n')
+"
+
