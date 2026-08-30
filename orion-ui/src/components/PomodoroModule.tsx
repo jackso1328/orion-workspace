@@ -224,7 +224,7 @@ export default function PomodoroModule() {
           <>
             {/* The Giant Timer */}
                         <div className={`timer-wrapper ${isActive ? "is-active" : ""} ${mode === "pomodoro" ? "pomodoro-theme" : "break-theme"}`}>
-              <svg width="320" height="320" className="timer-svg">
+              <svg viewBox="0 0 320 320" className="timer-svg" style={{ width: "100%", height: "100%" }}>
                 {/* Background Track */}
                 <circle 
                   cx="160" cy="160" r={circleRadius} 

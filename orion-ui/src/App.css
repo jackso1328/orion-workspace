@@ -3489,6 +3489,8 @@ body {
   position: relative;
   width: 320px;
   height: 320px;
+  max-width: 100%;
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3530,4 +3532,51 @@ body {
 .control-btn:active {
   transform: scale(0.95) translateY(2px);
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* POMODORO RESPONSIVENESS */
+@media (max-width: 768px) {
+  .pomodoro-module {
+    padding: 20px;
+  }
+  .pomodoro-container {
+    padding: 30px 20px;
+  }
+  .pomodoro-modes {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .timer-wrapper {
+    width: 280px;
+    height: 280px;
+  }
+  .timer-text-overlay {
+    font-size: 4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pomodoro-module {
+    padding: 10px;
+  }
+  .pomodoro-container {
+    padding: 24px 16px;
+  }
+  .pomodoro-modes {
+    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    background: transparent;
+  }
+  .pomodoro-modes .mode-btn {
+    background: var(--bg-primary);
+    justify-content: center;
+  }
+  .timer-wrapper {
+    width: 240px;
+    height: 240px;
+  }
+  .timer-text-overlay {
+    font-size: 3.5rem;
+  }
 }
