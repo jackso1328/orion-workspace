@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Play, Pause, RotateCcw, Brain, Coffee, Wind, Settings } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useOrionStore } from "../store/useOrionStore";
+import { animate, stagger } from "animejs";
 
 type TimerMode = 'pomodoro' | 'shortBreak' | 'longBreak';
 
@@ -28,6 +29,20 @@ export default function PomodoroModule() {
   const [isActive, setIsActive] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string>(initialTaskId || "");
   const [showSettings, setShowSettings] = useState(false);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (!hasAnimated.current) {
+      hasAnimated.current = true;
+      animate(".pomodoro-container > *", {
+        translateY: [20, 0],
+        opacity: [0, 1],
+        delay: stagger(80),
+        ease: "outExpo",
+        duration: 800,
+      });
+    }
+  }, []);
 
   
   // When settings change, if timer is not active, update the time left
@@ -208,7 +223,7 @@ export default function PomodoroModule() {
         ) : (
           <>
             {/* The Giant Timer */}
-                        <div className="timer-wrapper">
+                        <div className={`timer-wrapper ${isActive ? "is-active" : ""} ${mode === "pomodoro" ? "pomodoro-theme" : "break-theme"}`}>
               <svg width="320" height="320" className="timer-svg">
                 {/* Background Track */}
                 <circle 
