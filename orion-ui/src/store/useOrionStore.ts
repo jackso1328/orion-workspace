@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { OrionModeId } from '../config/modes';
 
 export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Overdue';
 export type TaskPriority = 'Critical' | 'High' | 'Medium' | 'Low';
@@ -127,6 +128,8 @@ export interface Document {
 }
 
 export interface OrionState {
+  activeMode: OrionModeId;
+  setActiveMode: (mode: OrionModeId) => void;
   tasks: Task[];
   documents: Document[];
   scratchpad: string;
@@ -174,6 +177,8 @@ const ACCENT_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#14b8a6", "#f59e0b", "#
 export const useOrionStore = create<OrionState>()(
   persist(
     (set) => ({
+      activeMode: 'study',
+      setActiveMode: (mode) => set({ activeMode: mode }),
       tasks: [],
       documents: [
         {
@@ -456,6 +461,15 @@ export const useOrionStore = create<OrionState>()(
     {
       name: 'orion-storage',
       storage: createJSONStorage(() => localStorage),
+      merge: (persistedState: any, currentState) => {
+        if (persistedState) {
+          const validModes: OrionModeId[] = ['study', 'research', 'developer', 'teaching', 'professional', 'custom'];
+          if (persistedState.activeMode && !validModes.includes(persistedState.activeMode)) {
+            persistedState.activeMode = 'study';
+          }
+        }
+        return { ...currentState, ...persistedState };
+      }
     }
   )
 );

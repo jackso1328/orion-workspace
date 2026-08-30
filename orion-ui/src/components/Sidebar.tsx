@@ -5,8 +5,47 @@ import {
   PenTool, Folder, Monitor, Layers, Repeat, Library,
   Microscope, Edit3, Code, Briefcase, Settings, Orbit, Sparkles
 } from "lucide-react";
+import { useOrionStore } from "../store/useOrionStore";
+import { ORION_MODES } from "../config/modes";
+import ModeSelector from "./ModeSelector";
+
+const ROUTE_REGISTRY = [
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, global: true },
+  { path: "/orion", label: "Talk to Orion", icon: Sparkles, global: true },
+  { path: "/calendar", label: "Calendar", icon: Calendar },
+  { path: "/planner", label: "Study Planner", icon: CheckSquare },
+  { path: "/goals", label: "Learning Goals", icon: Target },
+  { path: "/pomodoro", label: "Pomodoro Timer", icon: Clock },
+  { path: "/progress", label: "Progress Tracking", icon: TrendingUp },
+  { path: "/courses", label: "Courses", icon: GraduationCap },
+  { path: "/assignments", label: "Assignments", icon: ClipboardList },
+  { path: "/exams", label: "Exams", icon: FileText },
+  { path: "/quizzes", label: "Quizzes", icon: HelpCircle },
+  { path: "/questionbank", label: "Question Bank", icon: BookOpen },
+  { path: "/grading", label: "Grading System", icon: FileCheck },
+  { path: "/gradebook", label: "Gradebook", icon: FileText },
+  { path: "/notes", label: "Notes System", icon: PenTool },
+  { path: "/documents", label: "Document Reader", icon: Folder },
+  { path: "/whiteboard", label: "Digital Whiteboard", icon: Monitor },
+  { path: "/flashcards", label: "Flashcards", icon: Layers },
+  { path: "/spacedrep", label: "Spaced Repetition", icon: Repeat },
+  { path: "/library", label: "Resource Library", icon: Library },
+  { path: "/research", label: "Research Workspace", icon: Microscope },
+  { path: "/writing", label: "Writing Workspace", icon: Edit3 },
+  { path: "/challenges", label: "Programming Challenges", icon: Code },
+  { path: "/portfolio", label: "Developer Portfolio", icon: Briefcase },
+  { path: "/settings", label: "Settings", icon: Settings, global: true, bottom: true }
+];
 
 export default function Sidebar() {
+  const activeModeId = useOrionStore(state => state.activeMode);
+  const activeMode = ORION_MODES[activeModeId] || ORION_MODES['study'];
+
+  const globalRoutes = ROUTE_REGISTRY.filter(r => r.global && !r.bottom);
+  const primaryRoutes = ROUTE_REGISTRY.filter(r => !r.global && activeMode.primaryRoutes.includes(r.path));
+  const secondaryRoutes = ROUTE_REGISTRY.filter(r => !r.global && !activeMode.primaryRoutes.includes(r.path));
+  const bottomRoute = ROUTE_REGISTRY.find(r => r.bottom);
+
   return (
     <aside className="app-sidebar" style={{ overflowY: 'auto' }}>
       <div className="sidebar-brand">
@@ -17,61 +56,59 @@ export default function Sidebar() {
         <div className="brand-subtitle">Personal OS</div>
       </div>
       
+      <ModeSelector />
+
       <div className="sidebar-section">
         <h4 className="sidebar-label">WORKSPACE</h4>
         <nav className="sidebar-nav">
-          <NavLink to="/dashboard" className="nav-item"><LayoutDashboard size={18} /> Dashboard</NavLink>
-          <NavLink to="/orion" className="nav-item"><Sparkles size={18} /> Talk to Orion</NavLink>
-          <NavLink to="/calendar" className="nav-item"><Calendar size={18} /> Calendar</NavLink>
-          <NavLink to="/planner" className="nav-item"><CheckSquare size={18} /> Study Planner</NavLink>
-          <NavLink to="/goals" className="nav-item"><Target size={18} /> Learning Goals</NavLink>
-          <NavLink to="/pomodoro" className="nav-item"><Clock size={18} /> Pomodoro Timer</NavLink>
-          <NavLink to="/progress" className="nav-item"><TrendingUp size={18} /> Progress Tracking</NavLink>
+          {globalRoutes.map(r => {
+            const Icon = r.icon;
+            return (
+              <NavLink key={r.path} to={r.path} className="nav-item">
+                <Icon size={18} /> {r.label}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 
       <div className="sidebar-section">
-        <h4 className="sidebar-label">LEARNING</h4>
+        <h4 className="sidebar-label">{activeMode.name.toUpperCase()} (PRIMARY)</h4>
         <nav className="sidebar-nav">
-          <NavLink to="/courses" className="nav-item"><GraduationCap size={18} /> Courses</NavLink>
-          <NavLink to="/assignments" className="nav-item"><ClipboardList size={18} /> Assignments</NavLink>
-          <NavLink to="/exams" className="nav-item"><FileText size={18} /> Exams</NavLink>
-          <NavLink to="/quizzes" className="nav-item"><HelpCircle size={18} /> Quizzes</NavLink>
-          <NavLink to="/questionbank" className="nav-item"><BookOpen size={18} /> Question Bank</NavLink>
-          <NavLink to="/grading" className="nav-item"><FileCheck size={18} /> Grading System</NavLink>
-          <NavLink to="/gradebook" className="nav-item"><FileText size={18} /> Gradebook</NavLink>
+          {primaryRoutes.map(r => {
+            const Icon = r.icon;
+            return (
+              <NavLink key={r.path} to={r.path} className="nav-item">
+                <Icon size={18} /> {r.label}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 
       <div className="sidebar-section">
-        <h4 className="sidebar-label">KNOWLEDGE</h4>
+        <h4 className="sidebar-label">AVAILABLE TOOLS</h4>
         <nav className="sidebar-nav">
-          <NavLink to="/notes" className="nav-item"><PenTool size={18} /> Notes System</NavLink>
-          <NavLink to="/documents" className="nav-item"><Folder size={18} /> Document Reader</NavLink>
-          <NavLink to="/whiteboard" className="nav-item"><Monitor size={18} /> Digital Whiteboard</NavLink>
-          <NavLink to="/flashcards" className="nav-item"><Layers size={18} /> Flashcards</NavLink>
-          <NavLink to="/spacedrep" className="nav-item"><Repeat size={18} /> Spaced Repetition</NavLink>
-          <NavLink to="/library" className="nav-item"><Library size={18} /> Resource Library</NavLink>
+          {secondaryRoutes.map(r => {
+            const Icon = r.icon;
+            return (
+              <NavLink key={r.path} to={r.path} className="nav-item">
+                <Icon size={18} /> {r.label}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 
-      <div className="sidebar-section">
-        <h4 className="sidebar-label">RESEARCH & DEV</h4>
-        <nav className="sidebar-nav">
-          <NavLink to="/research" className="nav-item"><Microscope size={18} /> Research Workspace</NavLink>
-          <NavLink to="/writing" className="nav-item"><Edit3 size={18} /> Writing Workspace</NavLink>
-          <NavLink to="/challenges" className="nav-item"><Code size={18} /> Programming Challenges</NavLink>
-          <NavLink to="/portfolio" className="nav-item"><Briefcase size={18} /> Developer Portfolio</NavLink>
-        </nav>
-      </div>
-
-      <div className="sidebar-section bottom">
-        <nav className="sidebar-nav">
-          <NavLink to="/settings" className="nav-item">
-            <Settings size={18} /> Settings
-          </NavLink>
-        </nav>
-      </div>
+      {bottomRoute && (
+        <div className="sidebar-section bottom">
+          <nav className="sidebar-nav">
+            <NavLink to={bottomRoute.path} className="nav-item">
+              <bottomRoute.icon size={18} /> {bottomRoute.label}
+            </NavLink>
+          </nav>
+        </div>
+      )}
     </aside>
   );
 }
