@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { OrionModeId } from '../config/modes';
 import { Plan, PlanItem, PlanStatus } from '../domain/planning/types';
 import { validatePlanItems } from '../domain/planning/validation';
+import { InboxItem } from '../domain/inbox/types';
 
 export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Overdue';
 export type TaskPriority = 'Critical' | 'High' | 'Medium' | 'Low';
@@ -20,10 +21,43 @@ export interface Task {
   estimatedMinutes?: number;
   pomodorosCompleted?: number;
   courseId?: string;
+  projectId?: string;
   documentIds: string[];
   createdAt: string; // ISO string
   completedAt?: string; // ISO string
   color: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  status: 'Active' | 'Completed' | 'Archived';
+  tags: string[];
+  color: string;
+}
+
+export interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  metric: string;
+  target: number;
+  current: number;
+  deadline?: string;
+}
+
+export interface Snippet {
+  id: string;
+  title: string;
+  language: string;
+  code: string;
+  tags: string[];
+}
+
+export interface Whiteboard {
+  id: string;
+  title: string;
+  data: string; // JSON
 }
 
 export interface Flashcard {
@@ -130,9 +164,31 @@ export interface Document {
 }
 
 export interface OrionState {
+  inbox: InboxItem[];
+  addInboxItem: (content: string) => void;
+  removeInboxItem: (id: string) => void;
+  markInboxItemProcessed: (id: string) => void;
+  isSearchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
   activeMode: OrionModeId;
   setActiveMode: (mode: OrionModeId) => void;
   tasks: Task[];
+  projects: Project[];
+  addProject: (p: Omit<Project, 'id'>) => void;
+  updateProject: (id: string, u: Partial<Project>) => void;
+  deleteProject: (id: string) => void;
+  goals: Goal[];
+  addGoal: (g: Omit<Goal, 'id'>) => void;
+  updateGoal: (id: string, u: Partial<Goal>) => void;
+  deleteGoal: (id: string) => void;
+  snippets: Snippet[];
+  addSnippet: (s: Omit<Snippet, 'id'>) => void;
+  updateSnippet: (id: string, u: Partial<Snippet>) => void;
+  deleteSnippet: (id: string) => void;
+  whiteboards: Whiteboard[];
+  addWhiteboard: (w: Omit<Whiteboard, 'id'>) => void;
+  updateWhiteboard: (id: string, u: Partial<Whiteboard>) => void;
+  deleteWhiteboard: (id: string) => void;
   documents: Document[];
   scratchpad: string;
   pomodoroSettings: { pomodoro: number; shortBreak: number; longBreak: number; };
@@ -185,9 +241,31 @@ const ACCENT_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#14b8a6", "#f59e0b", "#
 export const useOrionStore = create<OrionState>()(
   persist(
     (set) => ({
+      isSearchOpen: false,
+      setSearchOpen: (open) => set({ isSearchOpen: open }),
       activeMode: 'study',
       setActiveMode: (mode) => set({ activeMode: mode }),
+      inbox: [],
+      addInboxItem: (content) => set((state) => ({ inbox: [{ id: uuidv4(), content, createdAt: new Date().toISOString() }, ...state.inbox] })),
+      removeInboxItem: (id) => set((state) => ({ inbox: state.inbox.filter((item) => item.id !== id) })),
+      markInboxItemProcessed: (id) => set((state) => ({ inbox: state.inbox.map((item) => item.id === id ? { ...item, processedAt: new Date().toISOString() } : item) })),
       tasks: [],
+      projects: [],
+      addProject: (p) => set((s) => ({ projects: [{ ...p, id: uuidv4() }, ...s.projects] })),
+      updateProject: (id, u) => set((s) => ({ projects: s.projects.map(x => x.id === id ? { ...x, ...u } : x) })),
+      deleteProject: (id) => set((s) => ({ projects: s.projects.filter(x => x.id !== id) })),
+      goals: [],
+      addGoal: (g) => set((s) => ({ goals: [{ ...g, id: uuidv4() }, ...s.goals] })),
+      updateGoal: (id, u) => set((s) => ({ goals: s.goals.map(x => x.id === id ? { ...x, ...u } : x) })),
+      deleteGoal: (id) => set((s) => ({ goals: s.goals.filter(x => x.id !== id) })),
+      snippets: [],
+      addSnippet: (sn) => set((s) => ({ snippets: [{ ...sn, id: uuidv4() }, ...s.snippets] })),
+      updateSnippet: (id, u) => set((s) => ({ snippets: s.snippets.map(x => x.id === id ? { ...x, ...u } : x) })),
+      deleteSnippet: (id) => set((s) => ({ snippets: s.snippets.filter(x => x.id !== id) })),
+      whiteboards: [],
+      addWhiteboard: (w) => set((s) => ({ whiteboards: [{ ...w, id: uuidv4() }, ...s.whiteboards] })),
+      updateWhiteboard: (id, u) => set((s) => ({ whiteboards: s.whiteboards.map(x => x.id === id ? { ...x, ...u } : x) })),
+      deleteWhiteboard: (id) => set((s) => ({ whiteboards: s.whiteboards.filter(x => x.id !== id) })),
       documents: [
         {
           id: "default-note",
@@ -221,7 +299,7 @@ export const useOrionStore = create<OrionState>()(
               type: 'multiple-choice',
               prompt: 'Which hook is best for managing complex state objects in React?',
               options: ['useState', 'useReducer', 'useContext', 'useMemo'],
-              correctAnswer: '1', // index of 'useReducer'
+              correctAnswer: '1',
               explanation: 'useReducer is often preferable to useState when you have complex state logic that involves multiple sub-values.'
             },
             {

@@ -4,7 +4,7 @@ import { useOrionStore } from "../store/useOrionStore";
 import { format } from "date-fns";
 
 export default function DocumentsModule() {
-  const documents = useOrionStore(state => state.documents.filter(d => d.type !== 'md'));
+  const documents = useOrionStore(state => state.documents).filter(d => d.type !== 'md');
   const deleteDocument = useOrionStore(state => state.deleteDocument);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -107,4 +107,5 @@ export default function DocumentsModule() {
     </div>
   );
 }
+
 

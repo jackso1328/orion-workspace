@@ -33,7 +33,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Study',
     description: 'Focus on coursework, exams, and spaced repetition.',
     iconName: 'Book',
-    primaryRoutes: ['/calendar', '/planner', '/goals', '/courses', '/assignments', '/exams', '/flashcards', '/spacedrep'],
+    primaryRoutes: ['/calendar', '/planner', '/courses', '/assignments', '/exams', '/quizzes', '/flashcards'],
     presentation: {
       theme: 'study',
       contextLabel: 'Study Session',
@@ -48,7 +48,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Research',
     description: 'Focus on literature review, document reading, and writing.',
     iconName: 'Microscope',
-    primaryRoutes: ['/calendar', '/research', '/documents', '/notes', '/library', '/writing', '/whiteboard'],
+    primaryRoutes: ['/calendar', '/research'],
     presentation: {
       theme: 'research',
       contextLabel: 'Research Context',
@@ -63,7 +63,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Developer',
     description: 'Focus on programming challenges, notes, and portfolio.',
     iconName: 'Code',
-    primaryRoutes: ['/calendar', '/challenges', '/portfolio', '/notes', '/whiteboard', '/goals'],
+    primaryRoutes: ['/calendar', '/projects', '/developer'],
     presentation: {
       theme: 'developer',
       contextLabel: 'Developer Workspace',
@@ -78,7 +78,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Teaching',
     description: 'Focus on grading, assignments, and course management.',
     iconName: 'GraduationCap',
-    primaryRoutes: ['/calendar', '/courses', '/assignments', '/quizzes', '/questionbank', '/grading', '/gradebook'],
+    primaryRoutes: ['/calendar', '/courses', '/assignments', '/quizzes', '/gradebook'],
     presentation: {
       theme: 'teaching',
       contextLabel: 'Teaching View',
@@ -93,7 +93,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Professional',
     description: 'Focus on calendar, goals, and daily progress.',
     iconName: 'Briefcase',
-    primaryRoutes: ['/calendar', '/goals', '/progress', '/pomodoro', '/notes', '/documents'],
+    primaryRoutes: ['/calendar', '/pomodoro', '/projects', '/goals'],
     presentation: {
       theme: 'professional',
       contextLabel: 'Professional Day',
@@ -108,7 +108,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Custom',
     description: 'A customized, unrestricted workspace.',
     iconName: 'Layout',
-    primaryRoutes: ['/calendar', '/planner', '/notes', '/goals', '/progress'],
+    primaryRoutes: ['/calendar', '/planner', '/notes'],
     presentation: {
       theme: 'custom',
       contextLabel: 'Orion Workspace',
@@ -119,3 +119,9 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     }
   }
 };
+
+
+
+
+
+
