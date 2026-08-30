@@ -46,6 +46,18 @@ export interface Goal {
   deadline?: string;
 }
 
+
+export interface Citation { id: string; title: string; authors: string[]; year: number; url?: string; notes?: string; }
+export interface Hypothesis { id: string; title: string; description: string; status: 'Draft' | 'Testing' | 'Validated' | 'Rejected'; }
+export interface DataLog { id: string; date: string; experiment: string; observations: string; }
+export interface Issue { id: string; title: string; status: 'Open' | 'InProgress' | 'Resolved'; priority: 'Low' | 'Medium' | 'High'; projectId?: string; }
+export interface LessonPlan { id: string; title: string; courseId: string; date: string; content: string; }
+export interface Student { id: string; name: string; email: string; courseIds: string[]; performanceScore?: number; }
+export interface Communication { id: string; subject: string; body: string; date: string; recipients: string[]; }
+export interface Meeting { id: string; title: string; date: string; attendees: string[]; notes: string; }
+export interface TimeLog { id: string; date: string; durationMinutes: number; taskId?: string; description: string; }
+export interface Contact { id: string; name: string; role: string; email: string; notes?: string; }
+
 export interface Snippet {
   id: string;
   title: string;
@@ -197,6 +209,17 @@ export interface OrionState {
   flashcardDecks: FlashcardDeck[];
   flashcards: Flashcard[];
   exams: Exam[];
+    citations: Citation[];
+    hypotheses: Hypothesis[];
+    dataLogs: DataLog[];
+    issues: Issue[];
+    lessonPlans: LessonPlan[];
+    students: Student[];
+    communications: Communication[];
+    meetings: Meeting[];
+    timeLogs: TimeLog[];
+    contacts: Contact[];
+
 
   quizzes: Quiz[];
   addQuiz: (quiz: Omit<Quiz, 'id' | 'attempts'>) => void;
@@ -249,6 +272,17 @@ export const useOrionStore = create<OrionState>()(
       addInboxItem: (content) => set((state) => ({ inbox: [{ id: uuidv4(), content, createdAt: new Date().toISOString() }, ...state.inbox] })),
       removeInboxItem: (id) => set((state) => ({ inbox: state.inbox.filter((item) => item.id !== id) })),
       markInboxItemProcessed: (id) => set((state) => ({ inbox: state.inbox.map((item) => item.id === id ? { ...item, processedAt: new Date().toISOString() } : item) })),
+      
+      citations: [],
+      hypotheses: [],
+      dataLogs: [],
+      issues: [],
+      lessonPlans: [],
+      students: [],
+      communications: [],
+      meetings: [],
+      timeLogs: [],
+      contacts: [],
       tasks: [],
       projects: [],
       addProject: (p) => set((s) => ({ projects: [{ ...p, id: uuidv4() }, ...s.projects] })),

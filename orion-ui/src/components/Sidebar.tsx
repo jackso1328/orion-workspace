@@ -2,7 +2,8 @@ import { NavLink } from "react-router-dom";
 import { Settings, LayoutDashboard, Briefcase, TerminalSquare, Target, Palette, BookOpen, Calendar, CheckSquare, Clock, Search, Inbox,
   GraduationCap, FileText, ClipboardList, HelpCircle, 
   PenTool, Folder,  Layers, 
-  Orbit, Sparkles, Microscope
+  Orbit, Sparkles, Microscope,
+  BarChart, Map, Quote, FlaskConical, Database, Code2, Bug, AppWindow, Network, Notebook, Users, MessageSquare, Timer, Contact
 } from "lucide-react";
 import { useOrionStore } from "../store/useOrionStore";
 import { ORION_MODES } from "../config/modes";
@@ -29,6 +30,22 @@ const ROUTE_REGISTRY: Array<{path: string, label: string, icon: any, section: 'g
   { path: "/developer", label: "Developer Workspace", icon: TerminalSquare, section: 'primary' },
   { path: "/goals", label: "Goals & OKRs", icon: Target, section: 'primary' },
   { path: "/whiteboard", label: "Whiteboard", icon: Palette, section: 'knowledge' },
+
+  { path: "/study-analytics", label: "Study Analytics", icon: BarChart, section: 'primary' },
+  { path: "/syllabus-tracker", label: "Syllabus Tracker", icon: Map, section: 'primary' },
+  { path: "/citations", label: "Citation Manager", icon: Quote, section: 'primary' },
+  { path: "/hypotheses", label: "Hypotheses", icon: FlaskConical, section: 'primary' },
+  { path: "/data-logs", label: "Data Logs", icon: Database, section: 'primary' },
+  { path: "/snippets", label: "Code Snippets", icon: Code2, section: 'primary' },
+  { path: "/issues", label: "Issue Tracker", icon: Bug, section: 'primary' },
+  { path: "/api-docs", label: "API Docs", icon: AppWindow, section: 'primary' },
+  { path: "/architecture", label: "Architecture", icon: Network, section: 'primary' },
+  { path: "/lesson-plans", label: "Lesson Plans", icon: Notebook, section: 'primary' },
+  { path: "/students", label: "Student Roster", icon: Users, section: 'primary' },
+  { path: "/communications", label: "Communications", icon: MessageSquare, section: 'primary' },
+  { path: "/meetings", label: "Meetings", icon: Users, section: 'primary' },
+  { path: "/time-logs", label: "Time Tracking", icon: Timer, section: 'primary' },
+  { path: "/contacts", label: "Network", icon: Contact, section: 'primary' },
   { path: "/settings", label: "Settings", icon: Settings, section: 'system' }
 ];
 

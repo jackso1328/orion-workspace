@@ -24,6 +24,23 @@ import ComingSoon from "./components/ComingSoon";
 import ResearchWorkspace from "./components/ResearchWorkspace";
 import InboxModule from "./components/InboxModule";
 
+import StudyAnalytics from "./components/StudyAnalytics";
+import SyllabusTracker from "./components/SyllabusTracker";
+import CitationManager from "./components/CitationManager";
+import HypothesisTracker from "./components/HypothesisTracker";
+import DataLogs from "./components/DataLogs";
+import SnippetLibrary from "./components/SnippetLibrary";
+import IssueTracker from "./components/IssueTracker";
+import ApiDocs from "./components/ApiDocs";
+import ArchitectureDiagrams from "./components/ArchitectureDiagrams";
+import LessonPlanner from "./components/LessonPlanner";
+import StudentRoster from "./components/StudentRoster";
+import Communications from "./components/Communications";
+import MeetingAgendas from "./components/MeetingAgendas";
+import TimeLogs from "./components/TimeLogs";
+import ContactManager from "./components/ContactManager";
+
+
 function App() {
   return (
     <Routes>
@@ -36,6 +53,8 @@ function App() {
         <Route path="orion" element={<OrionModule />} />
         <Route path="calendar" element={<CalendarModule />} />
         <Route path="planner" element={<StudyPlanner />} />
+        <Route path="study-analytics" element={<StudyAnalytics />} />
+        <Route path="syllabus-tracker" element={<SyllabusTracker />} />
         <Route path="pomodoro" element={<PomodoroModule />} />
         <Route path="progress" element={<Navigate to="/dashboard" replace />} />
 
@@ -44,12 +63,22 @@ function App() {
         <Route path="projects" element={<ProjectsModule />} />
         <Route path="developer" element={<DeveloperWorkspace />} />
         <Route path="goals" element={<GoalsModule />} />
+        <Route path="snippets" element={<SnippetLibrary />} />
+        <Route path="issues" element={<IssueTracker />} />
+        <Route path="api-docs" element={<ApiDocs />} />
+        <Route path="architecture" element={<ArchitectureDiagrams />} />
+        <Route path="meetings" element={<MeetingAgendas />} />
+        <Route path="time-logs" element={<TimeLogs />} />
+        <Route path="contacts" element={<ContactManager />} />
         <Route path="assignments" element={<AssignmentsModule />} />
         <Route path="exams" element={<ExamsModule />} />
         <Route path="quizzes" element={<QuizModule />} />
         <Route path="questionbank" element={<QuestionBankModule />} />
         <Route path="gradebook" element={<GradebookModule />} />
         <Route path="grading" element={<ComingSoon title="Grading System" />} />
+        <Route path="lesson-plans" element={<LessonPlanner />} />
+        <Route path="students" element={<StudentRoster />} />
+        <Route path="communications" element={<Communications />} />
 
         {/* KNOWLEDGE */}
         <Route path="notes" element={<NotesModule />} />
@@ -61,6 +90,9 @@ function App() {
 
         {/* RESEARCH & DEV */}
         <Route path="research" element={<ResearchWorkspace />} />
+        <Route path="citations" element={<CitationManager />} />
+        <Route path="hypotheses" element={<HypothesisTracker />} />
+        <Route path="data-logs" element={<DataLogs />} />
         <Route path="writing" element={<Navigate to="/notes" replace />} />
         <Route path="settings" element={<SettingsModule />} />
       </Route>

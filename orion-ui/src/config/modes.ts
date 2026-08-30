@@ -33,7 +33,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Study',
     description: 'Focus on coursework, exams, and spaced repetition.',
     iconName: 'Book',
-    primaryRoutes: ['/calendar', '/planner', '/courses', '/assignments', '/exams', '/quizzes', '/flashcards'],
+    primaryRoutes: ['/calendar', '/planner', '/courses', '/assignments', '/exams', '/quizzes', '/flashcards', '/study-analytics', '/syllabus-tracker', '/pomodoro'],
     presentation: {
       theme: 'study',
       contextLabel: 'Study Session',
@@ -48,7 +48,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Research',
     description: 'Focus on literature review, document reading, and writing.',
     iconName: 'Microscope',
-    primaryRoutes: ['/calendar', '/research'],
+    primaryRoutes: ['/calendar', '/research', '/documents', '/citations', '/hypotheses', '/whiteboard', '/data-logs'],
     presentation: {
       theme: 'research',
       contextLabel: 'Research Context',
@@ -63,7 +63,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Developer',
     description: 'Focus on programming challenges, notes, and portfolio.',
     iconName: 'Code',
-    primaryRoutes: ['/calendar', '/projects', '/developer'],
+    primaryRoutes: ['/calendar', '/projects', '/developer', '/snippets', '/issues', '/api-docs', '/architecture', '/pomodoro'],
     presentation: {
       theme: 'developer',
       contextLabel: 'Developer Workspace',
@@ -78,7 +78,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Teaching',
     description: 'Focus on grading, assignments, and course management.',
     iconName: 'GraduationCap',
-    primaryRoutes: ['/calendar', '/courses', '/assignments', '/quizzes', '/gradebook'],
+    primaryRoutes: ['/calendar', '/courses', '/assignments', '/quizzes', '/gradebook', '/lesson-plans', '/students', '/communications'],
     presentation: {
       theme: 'teaching',
       contextLabel: 'Teaching View',
@@ -93,7 +93,7 @@ export const ORION_MODES: Record<OrionModeId, OrionMode> = {
     name: 'Professional',
     description: 'Focus on calendar, goals, and daily progress.',
     iconName: 'Briefcase',
-    primaryRoutes: ['/calendar', '/pomodoro', '/projects', '/goals'],
+    primaryRoutes: ['/calendar', '/pomodoro', '/projects', '/goals', '/meetings', '/time-logs', '/contacts'],
     presentation: {
       theme: 'professional',
       contextLabel: 'Professional Day',
