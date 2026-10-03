@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import { FileText, Plus, Search, Trash2 } from "lucide-react";
+import { FileText, Plus, Search, Trash2, Layers } from "lucide-react";
 import { useOrionStore } from "../store/useOrionStore";
 import { format } from "date-fns";
+import QuickNotesManager from "./QuickNotesManager";
 
 export default function NotesModule() {
   const documents = useOrionStore(state => state.documents).filter(d => d.type === 'md');
@@ -14,6 +16,13 @@ export default function NotesModule() {
 
   const [activeDocId, setActiveDocId] = useState<string | null>(documents[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState("");
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.activeDocId === 'quick-notes') {
+      setActiveDocId('quick-notes');
+    }
+  }, [location.state]);
 
   const activeDoc = documents.find(d => d.id === activeDocId);
 
@@ -108,6 +117,18 @@ export default function NotesModule() {
         </div>
 
         <div className="notes-list">
+          <div 
+            className={`note-list-item ${activeDocId === 'quick-notes' ? 'active' : ''}`}
+            onClick={() => setActiveDocId('quick-notes')}
+            style={{ marginBottom: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}
+          >
+            <Layers size={16} className="note-icon" color="var(--accent-color, #8b5cf6)" />
+            <div className="note-meta">
+              <span className="note-title" style={{ fontWeight: 600 }}>Quick Notes</span>
+              <span className="note-date">Fast capture</span>
+            </div>
+          </div>
+
           {filteredDocuments.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
               No notes found.
@@ -132,7 +153,9 @@ export default function NotesModule() {
 
       {/* Main Editor Area */}
       <div className="notes-editor-area">
-        {activeDoc ? (
+        {activeDocId === 'quick-notes' ? (
+          <QuickNotesManager />
+        ) : activeDoc ? (
           <div className="editor-container">
             <header className="editor-header">
               <input 

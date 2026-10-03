@@ -1,21 +1,14 @@
-import { Outlet, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import CommandPalette from "./components/CommandPalette";
+import QuickNotesDock from "./components/QuickNotesDock";
 
 export default function AppShell() {
-  const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => {
-    const handleQuickCapture = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Space') {
-        e.preventDefault();
-        navigate('/inbox');
-      }
-    };
-    window.addEventListener('keydown', handleQuickCapture);
-    return () => window.removeEventListener('keydown', handleQuickCapture);
-  }, [navigate]);
+  // The AI experience lives at /orion — hide Quick Notes there
+  const isAiRoute = location.pathname === '/orion' || location.pathname.startsWith('/orion/');
+
   return (
     <div className="dashboard-layout">
       <Sidebar />
@@ -23,8 +16,8 @@ export default function AppShell() {
       <main className="pane-workspace">
         <Outlet />
       </main>
+      {/* Global Quick Notes dock — hidden in AI experience */}
+      {!isAiRoute && <QuickNotesDock />}
     </div>
   );
 }
-
-

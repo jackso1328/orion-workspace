@@ -134,7 +134,7 @@ export default function PomodoroModule() {
   const modeColor = mode === 'pomodoro' ? 'var(--accent-rose)' : 'var(--accent-teal)';
 
   return (
-    <div className="pomodoro-module">
+    <div className="pomodoro-module" style={{ overflowY: 'auto', height: '100%' }}>
       <div className="pomodoro-container">
         
         <header className="pomodoro-header">

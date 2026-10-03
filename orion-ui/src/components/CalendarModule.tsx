@@ -163,7 +163,7 @@ export default function CalendarModule() {
   };
 
   return (
-    <div className="module-container">
+    <div className="module-container" style={{ overflowY: 'auto', height: '100%' }}>
       {renderHeader()}
       <div className="full-calendar">
         {renderDays()}
