@@ -5,18 +5,11 @@ import {
   Pause, 
   Play, 
   X, 
-  HardDrive, 
-  Cpu, 
-  ShieldCheck, 
   CheckCircle2, 
   AlertCircle,
   RefreshCw,
   KeyRound,
-  Zap,
-  Clock,
-  ArrowRight,
-  Radio,
-  Layers
+  ArrowRight
 } from "lucide-react";
 import { useOrionStore } from "../store/useOrionStore";
 import { useNavigate } from "react-router-dom";
@@ -149,11 +142,11 @@ export default function ModelDownloadModal() {
   };
 
   const formatEta = (seconds: number): string => {
-    if (!seconds || seconds <= 0) return "Calculating ETA...";
-    if (seconds < 60) return `~${Math.round(seconds)}s remaining`;
+    if (!seconds || seconds <= 0) return "Calculating...";
+    if (seconds < 60) return `~${Math.round(seconds)}s left`;
     const mins = Math.floor(seconds / 60);
     const secs = Math.round(seconds % 60);
-    return `~${mins}m ${secs}s remaining`;
+    return `~${mins}m ${secs}s left`;
   };
 
   const percentClamped = Math.min(Math.max(aiDownloadProgress.percent || 0, 0), 100);
@@ -166,888 +159,494 @@ export default function ModelDownloadModal() {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(4, 3, 10, 0.82)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
+        backgroundColor: "rgba(10, 8, 16, 0.75)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 99999,
-        padding: "1.5rem",
-        animation: "modalFadeIn 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        padding: "1.25rem",
+        animation: "modalFadeIn 220ms ease-out forwards",
       }}
     >
       <style>{`
         @keyframes modalFadeIn {
-          from { opacity: 0; transform: scale(0.96) translateY(8px); }
+          from { opacity: 0; transform: scale(0.97) translateY(6px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
         @keyframes progressShimmer {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(200%); }
         }
-        @keyframes neuralPulse {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.85; transform: scale(1.08); }
+        .orion-btn-primary {
+          background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+          border: none;
+          border-radius: 12px;
+          color: #ffffff;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 180ms ease;
+          box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
         }
-        @keyframes coreSpin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        .orion-btn-primary:hover {
+          filter: brightness(1.08);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
         }
-        @keyframes tipGlow {
-          0%, 100% { filter: drop-shadow(0 0 6px #c084fc); }
-          50% { filter: drop-shadow(0 0 14px #e879f9); }
-        }
-        .orion-glass-button {
-          transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .orion-glass-button:hover {
-          transform: translateY(-2px);
-          filter: brightness(1.12);
-        }
-        .orion-glass-button:active {
+        .orion-btn-primary:active {
           transform: translateY(0);
         }
-        .orion-spec-card {
-          transition: all 220ms ease;
+        .orion-btn-secondary {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          color: #e2e8f0;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 180ms ease;
         }
-        .orion-spec-card:hover {
-          transform: translateY(-2px);
-          border-color: rgba(168, 85, 247, 0.4) !important;
-          background: rgba(255, 255, 255, 0.045) !important;
+        .orion-btn-secondary:hover {
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(255, 255, 255, 0.16);
+          color: #ffffff;
+        }
+        .orion-btn-ghost {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          font-weight: 500;
+          cursor: pointer;
+          transition: color 180ms ease;
+        }
+        .orion-btn-ghost:hover {
+          color: #f1f5f9;
         }
       `}</style>
 
-      {/* Main Glass Hologram Modal */}
+      {/* Main Orion Modal Card */}
       <div
         ref={modalRef}
         style={{
           width: "100%",
-          maxWidth: "580px",
-          background: "radial-gradient(circle at 50% 0%, rgba(30, 22, 54, 0.98), rgba(12, 10, 22, 0.99) 75%)",
-          borderRadius: "24px",
+          maxWidth: "460px",
+          background: "rgba(18, 16, 26, 0.95)",
+          borderRadius: "20px",
           border: isError 
-            ? "1px solid rgba(239, 68, 68, 0.4)"
+            ? "1px solid rgba(239, 68, 68, 0.35)"
             : isCompleted
-            ? "1px solid rgba(16, 185, 129, 0.45)"
-            : "1px solid rgba(168, 85, 247, 0.28)",
-          boxShadow: isError
-            ? "0 30px 80px rgba(0, 0, 0, 0.85), 0 0 50px rgba(239, 68, 68, 0.2)"
-            : isCompleted
-            ? "0 30px 80px rgba(0, 0, 0, 0.85), 0 0 50px rgba(16, 185, 129, 0.25)"
-            : "0 35px 90px rgba(0, 0, 0, 0.9), 0 0 60px rgba(139, 92, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+            ? "1px solid rgba(16, 185, 129, 0.35)"
+            : "1px solid rgba(139, 92, 246, 0.2)",
+          boxShadow: "0 24px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
           color: "#ffffff",
           overflow: "hidden",
           position: "relative",
+          padding: "1.75rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.25rem",
         }}
       >
-        {/* Ambient Top Glow Light Beam */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: "15%",
-            right: "15%",
-            height: "1px",
-            background: isError
-              ? "linear-gradient(90deg, transparent, #ef4444, transparent)"
-              : isCompleted
-              ? "linear-gradient(90deg, transparent, #10b981, transparent)"
-              : "linear-gradient(90deg, transparent, #c084fc, #38bdf8, transparent)",
-            boxShadow: isError
-              ? "0 0 20px #ef4444"
-              : isCompleted
-              ? "0 0 20px #10b981"
-              : "0 0 25px #c084fc",
-          }}
-        />
-
-        {/* Ambient Radial Spotlight inside header */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-80px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "300px",
-            height: "180px",
-            borderRadius: "50%",
-            background: isError
-              ? "radial-gradient(circle, rgba(239, 68, 68, 0.25), transparent 70%)"
-              : isCompleted
-              ? "radial-gradient(circle, rgba(16, 185, 129, 0.25), transparent 70%)"
-              : "radial-gradient(circle, rgba(147, 51, 234, 0.28), transparent 70%)",
-            filter: "blur(30px)",
-            pointerEvents: "none",
-          }}
-        />
-
-        {/* Floating Top Badge */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "1.25rem 1.75rem 0.75rem",
-          }}
-        >
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "4px 12px",
-              borderRadius: "999px",
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              fontSize: "0.72rem",
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: isError ? "#f87171" : isCompleted ? "#34d399" : "#c084fc",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            <span
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                backgroundColor: isError ? "#ef4444" : isCompleted ? "#10b981" : "#a855f7",
-                boxShadow: isError 
-                  ? "0 0 8px #ef4444" 
-                  : isCompleted 
-                  ? "0 0 8px #10b981" 
-                  : "0 0 8px #a855f7",
-                animation: "neuralPulse 2s infinite ease-in-out",
-              }}
-            />
-            {isError 
-              ? "Pipeline Alert" 
-              : isCompleted 
-              ? "Neural Core Active" 
-              : "Autonomous Intelligence • Local Core"}
-          </div>
-
-          {/* Close / Dismiss Icon */}
-          <button
-            onClick={handleDecline}
-            aria-label="Close modal"
-            style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#a1a1aa",
-              cursor: "pointer",
-              transition: "all 180ms ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.12)";
-              e.currentTarget.style.color = "#ffffff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-              e.currentTarget.style.color = "#a1a1aa";
-            }}
-          >
-            <X size={15} />
-          </button>
-        </div>
-
-        <div style={{ padding: "0.5rem 2rem 2rem" }}>
-          {/* Hero Header Area */}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "1.75rem" }}>
-            {/* Holographic Glowing Core Icon */}
+        {/* Header Row: Icon, Title & Close Button */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div
               style={{
-                width: "56px",
-                height: "56px",
-                borderRadius: "18px",
+                width: "44px",
+                height: "44px",
+                borderRadius: "14px",
                 background: isError
-                  ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.35))"
+                  ? "rgba(239, 68, 68, 0.15)"
                   : isCompleted
-                  ? "linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35))"
-                  : "linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(79, 70, 229, 0.3))",
+                  ? "rgba(16, 185, 129, 0.15)"
+                  : isPaused
+                  ? "rgba(245, 158, 11, 0.15)"
+                  : "rgba(139, 92, 246, 0.15)",
                 border: isError
-                  ? "1px solid rgba(239, 68, 68, 0.45)"
+                  ? "1px solid rgba(239, 68, 68, 0.3)"
                   : isCompleted
-                  ? "1px solid rgba(16, 185, 129, 0.5)"
-                  : "1px solid rgba(168, 85, 247, 0.45)",
+                  ? "1px solid rgba(16, 185, 129, 0.3)"
+                  : isPaused
+                  ? "1px solid rgba(245, 158, 11, 0.3)"
+                  : "1px solid rgba(139, 92, 246, 0.3)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: isError ? "#f87171" : isCompleted ? "#34d399" : "#e879f9",
-                boxShadow: isError
-                  ? "0 8px 24px rgba(239, 68, 68, 0.25)"
+                color: isError
+                  ? "#f87171"
                   : isCompleted
-                  ? "0 8px 24px rgba(16, 185, 129, 0.25)"
-                  : "0 8px 28px rgba(147, 51, 234, 0.35)",
+                  ? "#34d399"
+                  : isPaused
+                  ? "#fbbf24"
+                  : "#c084fc",
                 flexShrink: 0,
-                position: "relative",
               }}
             >
               {isError ? (
-                <AlertCircle size={28} />
+                <AlertCircle size={22} />
               ) : isCompleted ? (
-                <CheckCircle2 size={28} />
+                <CheckCircle2 size={22} />
+              ) : isPaused ? (
+                <Pause size={20} />
+              ) : isDownloading ? (
+                <Download size={20} />
               ) : (
-                <Sparkles size={28} />
+                <Sparkles size={22} />
               )}
             </div>
 
             <div>
-              <h2
+              <h3
                 style={{
                   margin: 0,
-                  fontSize: "1.5rem",
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
-                  background: isError
-                    ? "linear-gradient(135deg, #ffffff 40%, #fca5a5 100%)"
-                    : isCompleted
-                    ? "linear-gradient(135deg, #ffffff 40%, #6ee7b7 100%)"
-                    : "linear-gradient(135deg, #ffffff 30%, #d8b4fe 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  fontSize: "1.18rem",
+                  fontWeight: 600,
+                  color: "#f8fafc",
+                  letterSpacing: "-0.01em",
                 }}
               >
                 {isError
-                  ? "Model Transfer Interrupted"
+                  ? "Download Interrupted"
                   : isDownloading
-                  ? "Downloading Local Neural Engine"
+                  ? "Downloading AI Model"
                   : isPaused
-                  ? "Model Download Suspended"
+                  ? "Download Paused"
                   : isCompleted
-                  ? "ORION Brain Fully Initialized"
-                  : "Initialize ORION Local Brain"}
-              </h2>
-              <p style={{ margin: "4px 0 0", fontSize: "0.88rem", color: "#a1a1aa", lineHeight: 1.4 }}>
+                  ? "AI Model Ready"
+                  : "Download Local AI Model"}
+              </h3>
+              <p style={{ margin: "3px 0 0", fontSize: "0.84rem", color: "#94a3b8", lineHeight: 1.4 }}>
                 {isError
-                  ? "Connection lost or interrupted. Partial progress is preserved on disk."
+                  ? "Connection issue. Progress has been preserved."
                   : isDownloading
-                  ? "Streaming in-process GGUF weights directly to disk with resumable range streaming."
+                  ? "Downloading local model weights to your device."
                   : isPaused
-                  ? "Paused at current byte offset. You can resume at any time."
+                  ? "Download paused. Resume whenever you're ready."
                   : isCompleted
-                  ? "Zero-telemetry quantized model cached and verified."
-                  : "100% Offline • Private On-Device Neural Processing"}
+                  ? "Offline neural engine is installed and active."
+                  : "Required for offline voice assistant and smart planning."}
               </p>
             </div>
           </div>
 
-          {/* STATE 1: ERROR VIEW */}
-          {isError && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <div
+          <button
+            onClick={handleDecline}
+            aria-label="Close modal"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#94a3b8",
+              cursor: "pointer",
+              padding: "4px",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "color 150ms ease",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#f1f5f9")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* STATE 1: ERROR VIEW */}
+        {isError && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div
+              style={{
+                background: "rgba(239, 68, 68, 0.08)",
+                border: "1px solid rgba(239, 68, 68, 0.2)",
+                borderRadius: "12px",
+                padding: "12px 14px",
+                color: "#fca5a5",
+                fontSize: "0.85rem",
+                lineHeight: 1.45,
+              }}
+            >
+              {aiDownloadProgress.error || "Failed to download model weights. Please check your connection and try again."}
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+              <button
+                onClick={() => startAiModelDownload()}
+                className="orion-btn-primary"
                 style={{
-                  background: "rgba(239, 68, 68, 0.08)",
-                  border: "1px solid rgba(239, 68, 68, 0.25)",
-                  borderRadius: "14px",
-                  padding: "1.1rem 1.25rem",
-                  color: "#fca5a5",
+                  flex: 1,
+                  padding: "11px 16px",
                   fontSize: "0.9rem",
-                  lineHeight: 1.5,
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "12px",
-                }}
-              >
-                <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: "2px" }} />
-                <div>
-                  <div style={{ fontWeight: 600, color: "#f87171", marginBottom: "3px" }}>Transfer Failed</div>
-                  <div>{aiDownloadProgress.error || "Failed to stream model weights from huggingface CDN. Check connection and ensure backend is online."}</div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
-                <button
-                  onClick={() => startAiModelDownload()}
-                  className="orion-glass-button"
-                  style={{
-                    flex: 2,
-                    background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-                    border: "1px solid rgba(192, 132, 252, 0.35)",
-                    borderRadius: "12px",
-                    padding: "13px 20px",
-                    color: "#ffffff",
-                    fontSize: "0.95rem",
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    cursor: "pointer",
-                    boxShadow: "0 6px 20px rgba(139, 92, 246, 0.4)",
-                  }}
-                >
-                  <RefreshCw size={17} />
-                  Resume / Retry Download
-                </button>
-
-                <button
-                  onClick={handleDecline}
-                  className="orion-glass-button"
-                  style={{
-                    flex: 1,
-                    background: "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                    borderRadius: "12px",
-                    padding: "13px 16px",
-                    color: "#a1a1aa",
-                    fontSize: "0.92rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STATE 2: INITIAL CONFIRMATION PROMPT */}
-          {!isError && !isDownloading && !isPaused && !isCompleted && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <p style={{ margin: 0, fontSize: "0.92rem", lineHeight: 1.55, color: "#d4d4d8" }}>
-                To enable autonomous task creation, executive study scheduling, voice commands, and document reasoning without sending your data to external cloud APIs, ORION will download a high-performance local language model.
-              </p>
-
-              {/* Holographic Spec Cards (3-Tile Grid) */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "10px",
-                }}
-              >
-                {/* Tile 1: Size */}
-                <div
-                  className="orion-spec-card"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.025)",
-                    border: "1px solid rgba(255, 255, 255, 0.07)",
-                    borderRadius: "14px",
-                    padding: "14px 12px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "10px",
-                      background: "rgba(168, 85, 247, 0.15)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#c084fc",
-                    }}
-                  >
-                    <HardDrive size={16} />
-                  </div>
-                  <span style={{ fontSize: "0.72rem", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600 }}>
-                    Footprint
-                  </span>
-                  <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#f4f4f5" }}>
-                    {aiModelSizeFormatted || "2.1 GB"}
-                  </span>
-                  <span style={{ fontSize: "0.68rem", color: "#c084fc", fontWeight: 500 }}>
-                    Q4_K_M Quantized
-                  </span>
-                </div>
-
-                {/* Tile 2: Architecture */}
-                <div
-                  className="orion-spec-card"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.025)",
-                    border: "1px solid rgba(255, 255, 255, 0.07)",
-                    borderRadius: "14px",
-                    padding: "14px 12px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "10px",
-                      background: "rgba(56, 189, 248, 0.15)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#38bdf8",
-                    }}
-                  >
-                    <Cpu size={16} />
-                  </div>
-                  <span style={{ fontSize: "0.72rem", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600 }}>
-                    Architecture
-                  </span>
-                  <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#f4f4f5" }}>
-                    Qwen 2.5
-                  </span>
-                  <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontWeight: 500 }}>
-                    3B Parameters
-                  </span>
-                </div>
-
-                {/* Tile 3: Privacy */}
-                <div
-                  className="orion-spec-card"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.025)",
-                    border: "1px solid rgba(255, 255, 255, 0.07)",
-                    borderRadius: "14px",
-                    padding: "14px 12px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "10px",
-                      background: "rgba(52, 211, 153, 0.15)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#34d399",
-                    }}
-                  >
-                    <ShieldCheck size={16} />
-                  </div>
-                  <span style={{ fontSize: "0.72rem", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600 }}>
-                    Telemetry
-                  </span>
-                  <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "#34d399" }}>
-                    Zero Cloud
-                  </span>
-                  <span style={{ fontSize: "0.68rem", color: "#10b981", fontWeight: 500 }}>
-                    100% Offline
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons Deck */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", marginTop: "0.5rem" }}>
-                <button
-                  onClick={() => startAiModelDownload()}
-                  className="orion-glass-button"
-                  style={{
-                    background: "linear-gradient(135deg, #9333ea, #6366f1 60%, #3b82f6)",
-                    border: "1px solid rgba(216, 180, 254, 0.4)",
-                    borderRadius: "14px",
-                    padding: "14px 22px",
-                    color: "#ffffff",
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "10px",
-                    cursor: "pointer",
-                    boxShadow: "0 8px 30px rgba(124, 58, 237, 0.45)",
-                  }}
-                >
-                  <Download size={19} />
-                  Download Model ({aiModelSizeFormatted || "2.1 GB"})
-                </button>
-
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button
-                    onClick={handleGoToSettings}
-                    className="orion-glass-button"
-                    style={{
-                      flex: 1.2,
-                      background: "rgba(255, 255, 255, 0.04)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      borderRadius: "12px",
-                      padding: "11px 16px",
-                      color: "#e4e4e7",
-                      fontSize: "0.88rem",
-                      fontWeight: 500,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "7px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <KeyRound size={15} color="#c084fc" />
-                    Use Cloud Key Instead
-                  </button>
-
-                  <button
-                    onClick={handleDecline}
-                    className="orion-glass-button"
-                    style={{
-                      flex: 0.8,
-                      background: "transparent",
-                      border: "1px solid rgba(255, 255, 255, 0.07)",
-                      borderRadius: "12px",
-                      padding: "11px 14px",
-                      color: "#a1a1aa",
-                      fontSize: "0.88rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Later
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STATE 3: DOWNLOADING & PAUSED VIEW (CYBER INSTRUMENT HUD) */}
-          {!isError && (isDownloading || isPaused) && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.35rem" }}>
-              {/* Digital Percentage & Scale Readout */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-end",
-                  padding: "4px 2px",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "0.76rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#a1a1aa", fontWeight: 600 }}>
-                    {isPaused ? "Transfer Suspended" : "Quantum Stream Active"}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "2.5rem",
-                      fontWeight: 800,
-                      letterSpacing: "-0.03em",
-                      lineHeight: 1.1,
-                      background: isPaused
-                        ? "linear-gradient(135deg, #fbbf24, #f59e0b)"
-                        : "linear-gradient(135deg, #ffffff 20%, #c084fc 60%, #38bdf8 100%)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                    }}
-                  >
-                    {Math.round(percentClamped)}%
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "inline-flex",
-                    flexDirection: "column",
-                    alignItems: "flex-end",
-                    gap: "2px",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "0.88rem",
-                      fontWeight: 600,
-                      color: "#f4f4f5",
-                    }}
-                  >
-                    {formatBytes(aiDownloadProgress.downloadedBytes)}
-                  </span>
-                  <span style={{ fontSize: "0.75rem", color: "#71717a" }}>
-                    of {formatBytes(aiDownloadProgress.totalBytes) || (aiModelSizeFormatted || "2.1 GB")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Ultra-High-Tech Progress Rail */}
-              <div
-                style={{
-                  width: "100%",
-                  height: "12px",
-                  backgroundColor: "rgba(255, 255, 255, 0.06)",
-                  borderRadius: "999px",
-                  padding: "2px",
-                  boxSizing: "border-box",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  position: "relative",
-                  boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.6)",
-                }}
-              >
-                {/* Progress Fill */}
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${percentClamped}%`,
-                    background: isPaused
-                      ? "linear-gradient(90deg, #f59e0b, #d97706)"
-                      : "linear-gradient(90deg, #6366f1, #a855f7 50%, #ec4899 80%, #38bdf8)",
-                    borderRadius: "999px",
-                    position: "relative",
-                    overflow: "hidden",
-                    transition: "width 250ms cubic-bezier(0.16, 1, 0.3, 1)",
-                    boxShadow: isPaused 
-                      ? "0 0 12px rgba(245, 158, 11, 0.5)" 
-                      : "0 0 16px rgba(168, 85, 247, 0.65)",
-                  }}
-                >
-                  {/* Shimmer Light Beam */}
-                  {!isPaused && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        bottom: 0,
-                        left: 0,
-                        width: "60px",
-                        background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent)",
-                        animation: "progressShimmer 1.8s infinite linear",
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* 3-Column Glass Telemetry HUD */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "8px",
-                }}
-              >
-                {/* Speed Card */}
-                <div
-                  style={{
-                    background: "rgba(255, 255, 255, 0.03)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    borderRadius: "12px",
-                    padding: "10px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <Zap size={15} color={isPaused ? "#a1a1aa" : "#34d399"} />
-                  <div style={{ overflow: "hidden" }}>
-                    <div style={{ fontSize: "0.68rem", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.04em" }}>Speed</div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: isPaused ? "#71717a" : "#f4f4f5", whiteSpace: "nowrap" }}>
-                      {isPaused ? "0.0 MB/s" : formatSpeed(aiDownloadProgress.speedMbps)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ETA Card */}
-                <div
-                  style={{
-                    background: "rgba(255, 255, 255, 0.03)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    borderRadius: "12px",
-                    padding: "10px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <Clock size={15} color={isPaused ? "#a1a1aa" : "#38bdf8"} />
-                  <div style={{ overflow: "hidden" }}>
-                    <div style={{ fontSize: "0.68rem", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.04em" }}>Estimate</div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#f4f4f5", whiteSpace: "nowrap" }}>
-                      {isPaused ? "Paused" : formatEta(aiDownloadProgress.etaSeconds)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* State Card */}
-                <div
-                  style={{
-                    background: "rgba(255, 255, 255, 0.03)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    borderRadius: "12px",
-                    padding: "10px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <Radio size={15} color={isPaused ? "#fbbf24" : "#c084fc"} />
-                  <div style={{ overflow: "hidden" }}>
-                    <div style={{ fontSize: "0.68rem", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.04em" }}>Protocol</div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: isPaused ? "#fbbf24" : "#c084fc", whiteSpace: "nowrap" }}>
-                      {isPaused ? "Suspended" : "HTTP Range"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tactical Control Deck */}
-              <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
-                {isDownloading ? (
-                  <button
-                    onClick={() => pauseAiModelDownload()}
-                    className="orion-glass-button"
-                    style={{
-                      flex: 2,
-                      background: "rgba(245, 158, 11, 0.12)",
-                      border: "1px solid rgba(245, 158, 11, 0.35)",
-                      borderRadius: "12px",
-                      padding: "13px 18px",
-                      color: "#fbbf24",
-                      fontSize: "0.94rem",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                      cursor: "pointer",
-                      boxShadow: "0 4px 16px rgba(245, 158, 11, 0.2)",
-                    }}
-                  >
-                    <Pause size={17} />
-                    Pause Download
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => resumeAiModelDownload()}
-                    className="orion-glass-button"
-                    style={{
-                      flex: 2,
-                      background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-                      border: "1px solid rgba(216, 180, 254, 0.35)",
-                      borderRadius: "12px",
-                      padding: "13px 18px",
-                      color: "#ffffff",
-                      fontSize: "0.94rem",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                      cursor: "pointer",
-                      boxShadow: "0 6px 22px rgba(139, 92, 246, 0.4)",
-                    }}
-                  >
-                    <Play size={17} />
-                    Resume Download
-                  </button>
-                )}
-
-                <button
-                  onClick={() => cancelAiModelDownload()}
-                  className="orion-glass-button"
-                  style={{
-                    flex: 1,
-                    background: "rgba(239, 68, 68, 0.08)",
-                    border: "1px solid rgba(239, 68, 68, 0.22)",
-                    borderRadius: "12px",
-                    padding: "13px 16px",
-                    color: "#f87171",
-                    fontSize: "0.92rem",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STATE 4: COMPLETED VIEW (HOLOGRAPHIC INITIALIZATION) */}
-          {!isError && isCompleted && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.4rem", textAlign: "center", padding: "0.5rem 0 0" }}>
-              <div
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  borderRadius: "24px",
-                  background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3))",
-                  border: "1px solid rgba(52, 211, 153, 0.45)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  margin: "0 auto",
-                  boxShadow: "0 0 40px rgba(16, 185, 129, 0.35)",
-                  position: "relative",
+                  gap: "7px",
                 }}
               >
-                <CheckCircle2 size={44} color="#34d399" />
-              </div>
-
-              <div>
-                <h3
-                  style={{
-                    margin: "0 0 6px 0",
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                    letterSpacing: "-0.01em",
-                    color: "#f4f4f5",
-                  }}
-                >
-                  Neural Weights Verified
-                </h3>
-                <p style={{ margin: 0, fontSize: "0.92rem", color: "#a1a1aa", maxWidth: "420px", marginInline: "auto", lineHeight: 1.5 }}>
-                  {aiDownloadProgress.modelName || "Qwen 2.5 3B"} is cached and loaded into your local offline inference runtime.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "10px",
-                  padding: "8px 16px",
-                  borderRadius: "10px",
-                  background: "rgba(16, 185, 129, 0.08)",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                  color: "#34d399",
-                  fontSize: "0.82rem",
-                  fontWeight: 600,
-                  margin: "0 auto",
-                }}
-              >
-                <Layers size={15} />
-                <span>Zero Latency • VRAM Optimized • Air-Gapped</span>
-              </div>
+                <RefreshCw size={15} /> Retry Download
+              </button>
 
               <button
-                onClick={handleStartUsing}
-                className="orion-glass-button"
+                onClick={handleDecline}
+                className="orion-btn-secondary"
                 style={{
-                  background: "linear-gradient(135deg, #10b981, #059669 60%, #047857)",
-                  border: "1px solid rgba(110, 231, 183, 0.45)",
-                  borderRadius: "14px",
-                  padding: "14px 22px",
-                  color: "#ffffff",
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
+                  padding: "11px 18px",
+                  fontSize: "0.88rem",
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STATE 2: INITIAL CONFIRMATION VIEW */}
+        {!isError && !isDownloading && !isPaused && !isCompleted && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+            {/* Minimal Model Info Badge */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "10px",
+                padding: "8px 12px",
+                fontSize: "0.82rem",
+                color: "#cbd5e1",
+              }}
+            >
+              <span style={{ fontWeight: 600, color: "#c084fc" }}>Qwen 2.5 3B</span>
+              <span style={{ color: "#64748b" }}>•</span>
+              <span>{aiModelSizeFormatted || "2.1 GB"} footprint</span>
+              <span style={{ color: "#64748b" }}>•</span>
+              <span style={{ color: "#34d399" }}>100% Offline</span>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "9px", marginTop: "2px" }}>
+              <button
+                onClick={() => startAiModelDownload()}
+                className="orion-btn-primary"
+                style={{
+                  width: "100%",
+                  padding: "12px 18px",
+                  fontSize: "0.92rem",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "8px",
-                  marginTop: "0.25rem",
-                  boxShadow: "0 8px 30px rgba(16, 185, 129, 0.45)",
                 }}
               >
-                <span>Launch ORION AI Command Center</span>
-                <ArrowRight size={18} />
+                <Download size={16} />
+                Download Model ({aiModelSizeFormatted || "2.1 GB"})
+              </button>
+
+              <button
+                onClick={handleGoToSettings}
+                className="orion-btn-secondary"
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  fontSize: "0.86rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "7px",
+                }}
+              >
+                <KeyRound size={15} color="#c084fc" />
+                Use Cloud API Key Instead
+              </button>
+
+              <button
+                onClick={handleDecline}
+                className="orion-btn-ghost"
+                style={{
+                  padding: "8px 12px",
+                  fontSize: "0.82rem",
+                  textAlign: "center",
+                }}
+              >
+                Maybe Later
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* STATE 3: DOWNLOADING & PAUSED VIEW */}
+        {!isError && (isDownloading || isPaused) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {/* Top Stat Row: Percent & Byte Count */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: 700,
+                  fontVariantNumeric: "tabular-nums",
+                  color: isPaused ? "#fbbf24" : "#c084fc",
+                }}
+              >
+                {Math.round(percentClamped)}%
+              </span>
+
+              <span style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
+                {formatBytes(aiDownloadProgress.downloadedBytes)} / {aiDownloadProgress.totalBytes ? formatBytes(aiDownloadProgress.totalBytes) : (aiModelSizeFormatted || "2.1 GB")}
+              </span>
+            </div>
+
+            {/* Approved Shimmer Progress Rail */}
+            <div
+              style={{
+                width: "100%",
+                height: "10px",
+                backgroundColor: "rgba(255, 255, 255, 0.06)",
+                borderRadius: "999px",
+                padding: "1px",
+                boxSizing: "border-box",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                position: "relative",
+                boxShadow: "inset 0 1px 3px rgba(0, 0, 0, 0.5)",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${percentClamped}%`,
+                  background: isPaused
+                    ? "linear-gradient(90deg, #f59e0b, #d97706)"
+                    : "linear-gradient(90deg, #6366f1, #a855f7 50%, #ec4899 80%, #38bdf8)",
+                  borderRadius: "999px",
+                  position: "relative",
+                  overflow: "hidden",
+                  transition: "width 250ms ease-out",
+                  boxShadow: isPaused 
+                    ? "0 0 12px rgba(245, 158, 11, 0.45)" 
+                    : "0 0 14px rgba(168, 85, 247, 0.6)",
+                }}
+              >
+                {!isPaused && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      bottom: 0,
+                      left: 0,
+                      width: "60px",
+                      background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent)",
+                      animation: "progressShimmer 1.8s infinite linear",
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Clean Telemetry Line: Speed & ETA */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.8rem",
+                color: "#94a3b8",
+              }}
+            >
+              <span>
+                {isPaused ? "Download paused" : `Speed: ${formatSpeed(aiDownloadProgress.speedMbps)}`}
+              </span>
+              <span>
+                {isPaused ? "Progress saved" : formatEta(aiDownloadProgress.etaSeconds)}
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "9px", marginTop: "4px" }}>
+              {isDownloading ? (
+                <button
+                  onClick={() => pauseAiModelDownload()}
+                  className="orion-btn-secondary"
+                  style={{
+                    flex: 1,
+                    padding: "10px 14px",
+                    fontSize: "0.88rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    color: "#fbbf24",
+                  }}
+                >
+                  <Pause size={15} /> Pause
+                </button>
+              ) : (
+                <button
+                  onClick={() => resumeAiModelDownload()}
+                  className="orion-btn-primary"
+                  style={{
+                    flex: 1,
+                    padding: "10px 14px",
+                    fontSize: "0.88rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Play size={15} /> Resume
+                </button>
+              )}
+
+              <button
+                onClick={() => cancelAiModelDownload()}
+                className="orion-btn-secondary"
+                style={{
+                  padding: "10px 14px",
+                  fontSize: "0.86rem",
+                  color: "#94a3b8",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleDecline}
+                className="orion-btn-secondary"
+                style={{
+                  padding: "10px 14px",
+                  fontSize: "0.86rem",
+                  color: "#cbd5e1",
+                }}
+              >
+                Minimize
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STATE 4: COMPLETED VIEW */}
+        {!isError && isCompleted && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem", textAlign: "center", padding: "0.5rem 0 0" }}>
+            <p style={{ margin: 0, fontSize: "0.88rem", color: "#94a3b8", lineHeight: 1.45 }}>
+              The local model has been verified and loaded. You can now use voice commands and autonomous features offline.
+            </p>
+
+            <button
+              onClick={handleStartUsing}
+              className="orion-btn-primary"
+              style={{
+                width: "100%",
+                padding: "12px 18px",
+                fontSize: "0.92rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              <span>Start Using Orion</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
