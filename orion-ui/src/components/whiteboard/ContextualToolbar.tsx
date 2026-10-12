@@ -1,7 +1,7 @@
 import React from 'react';
 import { Camera, WhiteboardObject, ShapeObject, TextObject, StickyObject, ArrowObject } from './types';
 import { getBoundingBox } from './utils';
-import { Trash2, Copy, Lock, Unlock } from 'lucide-react';
+import { Trash2, Copy, Lock, Unlock, Scissors } from 'lucide-react';
 
 interface ContextualToolbarProps {
   objects: Record<string, WhiteboardObject>;
@@ -76,24 +76,36 @@ export function ContextualToolbar({
   const divider = <div style={{ width: 1, height: 20, background: 'rgba(0,0,0,0.1)', margin: '0 4px' }} />;
 
   return (
-    <div style={{
-      position: 'absolute',
-      top, left,
-      transform: 'translateY(-100%)',
-      background: 'var(--bg-secondary, #fff)',
-      border: '1px solid var(--border-card, rgba(0,0,0,0.06))',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      borderRadius: '8px',
-      padding: '4px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '2px',
-      zIndex: 100,
-      fontFamily: 'var(--font-sans, Inter, sans-serif)',
-      pointerEvents: 'auto',
-    }}
-    onPointerDown={(e) => e.stopPropagation()} // Prevent selection from clearing
-    >
+    <>
+      <style>{`
+        @keyframes contextualPopoverIn {
+          from { opacity: 0; transform: translateY(-100%) scale(0.95) translateY(4px); }
+          to { opacity: 1; transform: translateY(-100%) scale(1) translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .anim-contextual { animation: none !important; }
+        }
+      `}</style>
+      <div className="anim-contextual" style={{
+        position: 'absolute',
+        top, left,
+        transform: 'translateY(-100%)',
+        background: 'var(--bg-secondary, #fff)',
+        border: '1px solid var(--border-card, rgba(0,0,0,0.06))',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        borderRadius: '8px',
+        padding: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '2px',
+        zIndex: 100,
+        fontFamily: 'var(--font-sans, Inter, sans-serif)',
+        pointerEvents: 'auto',
+        animation: 'contextualPopoverIn 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        transformOrigin: 'bottom left',
+      }}
+      onPointerDown={(e) => e.stopPropagation()} // Prevent selection from clearing
+      >
       {!isMulti && obj.type === 'text' && (
         <>
           <select 
@@ -114,7 +126,7 @@ export function ContextualToolbar({
         </>
       )}
 
-      {!isMulti && ['rectangle', 'ellipse', 'diamond'].includes(obj.type) && (
+      {!isMulti && ['rectangle', 'ellipse', 'diamond', 'triangle'].includes(obj.type) && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '0 4px' }}>
             <span>Fill</span>
@@ -170,6 +182,8 @@ export function ContextualToolbar({
         </>
       )}
 
+
+
       {!isMulti && obj.type === 'sticky' && (
         <>
           <select 
@@ -188,6 +202,16 @@ export function ContextualToolbar({
         </>
       )}
 
+      <button style={iconBtnStyle} onClick={() => {
+        try {
+          const payload = Array.from(selection).map(id => objects[id]);
+          navigator.clipboard.writeText(JSON.stringify({ type: 'orion-objects', data: payload }));
+        } catch (e) {}
+        deleteObjects(Array.from(selection));
+      }} title="Cut">
+        <Scissors size={16} />
+      </button>
+
       <button style={iconBtnStyle} onClick={handleToggleLock} title={allLocked ? 'Unlock' : 'Lock'}>
         {allLocked ? <Unlock size={16} /> : <Lock size={16} />}
       </button>
@@ -200,5 +224,6 @@ export function ContextualToolbar({
         <Trash2 size={16} />
       </button>
     </div>
+    </>
   );
 }

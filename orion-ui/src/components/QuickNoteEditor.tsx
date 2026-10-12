@@ -41,6 +41,7 @@ export default function QuickNoteEditor({ noteId, onClose, onNewNote }: QuickNot
   
   const note = useQuickNotesStore(state => state.notes.find(n => n.id === noteId));
   const updateNote = useQuickNotesStore(state => state.updateNote);
+  const deleteNote = useQuickNotesStore(state => state.deleteNote);
   
   const [content, setContent] = useState(note?.content ?? '');
   const [showColors, setShowColors] = useState(false);
@@ -69,7 +70,10 @@ export default function QuickNoteEditor({ noteId, onClose, onNewNote }: QuickNot
     const currentNoteId = noteId;
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
-      if (latestContentRef.current !== lastSavedContentRef.current) {
+      const finalContent = latestContentRef.current;
+      if (finalContent.trim() === '') {
+        deleteNote(currentNoteId);
+      } else if (latestContentRef.current !== lastSavedContentRef.current) {
         updateNote(currentNoteId, { content: latestContentRef.current });
       }
     };
@@ -123,7 +127,10 @@ export default function QuickNoteEditor({ noteId, onClose, onNewNote }: QuickNot
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
+    let val = e.target.value;
+    if (val.trim() === '/empty') {
+      val = '\u200B';
+    }
     setContent(val);
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
@@ -210,6 +217,52 @@ export default function QuickNoteEditor({ noteId, onClose, onNewNote }: QuickNot
           <QuickNoteTimeDecoration color={artColor} />
         </div>
 
+        {/* Left-side color panel — slides in from the left edge of the paper */}
+        {showColors && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '-48px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              background: 'var(--bg-panel, #fff)',
+              border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+              borderRadius: '12px',
+              padding: '8px 6px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              zIndex: 20,
+              animation: 'colorPanelSlideIn 150ms cubic-bezier(0.19,1,0.22,1) forwards',
+            }}
+          >
+            <style>{`@keyframes colorPanelSlideIn { from { opacity: 0; transform: translateY(-50%) translateX(8px); } to { opacity: 1; transform: translateY(-50%) translateX(0); } }`}</style>
+            {(Object.keys(PAPER_COLORS) as QuickNoteColor[]).map(c => (
+              <button
+                key={c}
+                aria-label={`Select ${c} color`}
+                onClick={() => { handleColorChange(c); setShowColors(false); }}
+                title={c.charAt(0).toUpperCase() + c.slice(1)}
+                style={{
+                  width: '28px', height: '28px', borderRadius: '50%',
+                  background: PAPER_COLORS[c],
+                  border: note.color === c
+                    ? '2.5px solid var(--text-primary, #1a1a2e)'
+                    : '1.5px solid rgba(0,0,0,0.12)',
+                  cursor: 'pointer', padding: 0,
+                  boxShadow: note.color === c ? '0 0 0 2px rgba(139,92,246,0.3)' : 'none',
+                  transition: 'transform 120ms ease, box-shadow 120ms ease',
+                  transform: note.color === c ? 'scale(1.15)' : 'scale(1)',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={e => { if (note.color !== c) e.currentTarget.style.transform = 'scale(1.1)'; }}
+                onMouseLeave={e => { if (note.color !== c) e.currentTarget.style.transform = 'scale(1)'; }}
+              />
+            ))}
+          </div>
+        )}
+
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -224,49 +277,23 @@ export default function QuickNoteEditor({ noteId, onClose, onNewNote }: QuickNot
             borderTopRightRadius: '16px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => { setShowColors(!showColors); }}
-                    title="Paper Color"
-                    aria-label="Paper Color"
-                    aria-expanded={showColors}
-                    style={{
-                      background: showColors ? 'rgba(0,0,0,0.08)' : 'transparent', border: 'none', cursor: 'pointer',
-                      color: 'var(--text-secondary)', padding: '6px', borderRadius: '6px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'background-color 150ms ease',
-                    }}
-                    onMouseOver={e => !showColors && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)')}
-                    onMouseOut={e => !showColors && (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <Palette size={18} />
-                  </button>
-                  {showColors && (
-                    <div style={{
-                      position: 'absolute', top: '100%', left: 0, marginTop: '8px',
-                      background: 'var(--bg-panel)', border: '1px solid var(--border-color)',
-                      borderRadius: '8px', padding: '8px', display: 'flex', gap: '8px',
-                      flexWrap: 'wrap', width: '150px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                      zIndex: 20
-                    }}>
-                      {(Object.keys(PAPER_COLORS) as QuickNoteColor[]).map(c => (
-                        <button
-                          key={c}
-                          aria-label={`Select ${c} color`}
-                          onClick={() => handleColorChange(c)}
-                          style={{
-                            width: '24px', height: '24px', borderRadius: '50%',
-                            background: PAPER_COLORS[c],
-                            border: note.color === c ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
-                            cursor: 'pointer', padding: 0
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Palette toggle — leftmost button */}
+              <button
+                onClick={() => { setShowColors(!showColors); }}
+                title="Paper Color"
+                aria-label="Paper Color"
+                aria-expanded={showColors}
+                style={{
+                  background: showColors ? 'rgba(0,0,0,0.08)' : 'transparent', border: 'none', cursor: 'pointer',
+                  color: showColors ? 'var(--accent-violet, #8b5cf6)' : 'var(--text-secondary)', padding: '6px', borderRadius: '6px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background-color 150ms ease, color 150ms ease',
+                }}
+                onMouseOver={e => !showColors && (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)')}
+                onMouseOut={e => !showColors && (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Palette size={18} />
+              </button>
 
               {note.context && (
                 <div style={{

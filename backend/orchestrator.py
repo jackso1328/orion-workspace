@@ -3,16 +3,25 @@ ORION - The Orchestrator (Brain Stem)
 This is the master controller that coordinates the VRAM Hot-Swap pipeline.
 
 Pipeline per conversation turn:
-  1. HEAR  → Spawns listen.py → Whisper loads on GPU → Transcribes → Process dies → VRAM freed
-  2. THINK → Calls Ollama API with keep_alive=0 → Gemma generates response → VRAM freed
+  1. HEAR  → Spawns listen.py → Whisper loads on GPU/CPU → Transcribes → Process dies → VRAM freed
+  2. THINK → Calls Unified Hybrid Router (backend/llm.py) → Generates response → VRAM freed
   3. SPEAK → Spawns speak.py  → Kokoro loads → Speaks → Process dies → VRAM freed
 
-At no point are two models on the GPU simultaneously.
+At no point are two large models on the GPU simultaneously.
 """
 import subprocess
 import sys
 import os
-import requests
+import asyncio
+
+# --- WINDOWS UTF-8 ENCODING RESILIENCE ---
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+# -----------------------------------------
 
 # ============================================================
 # CONFIGURATION
@@ -22,8 +31,10 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 LISTEN_SCRIPT = os.path.join(BACKEND_DIR, "listen.py")
 SPEAK_SCRIPT = os.path.join(BACKEND_DIR, "speak.py")
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-LLM_MODEL = "gemma4:e4b"
+try:
+    from backend.llm import generate_response
+except ImportError:
+    from llm import generate_response
 
 SYSTEM_PROMPT = (
     "You are ORION, a strict, highly logical AI Chief Operating Officer. "
@@ -32,86 +43,70 @@ SYSTEM_PROMPT = (
     "The user's name is Sriram Roshan."
 )
 
+
 # ============================================================
 # PHASE 1: HEAR (Speech-to-Text via Whisper)
 # ============================================================
 def hear():
     """
     Spawns listen.py as an isolated subprocess.
-    Whisper loads onto the GPU, transcribes, and the process dies.
+    Whisper loads, transcribes, and the process exits.
     VRAM is immediately freed when the process exits.
     """
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("👂 ORION IS LISTENING...")
-    print("="*50)
-    
+    print("=" * 50)
+
     result = subprocess.run(
         [PYTHON_EXE, LISTEN_SCRIPT],
         capture_output=True,
         text=True,
-        cwd=BACKEND_DIR
+        cwd=BACKEND_DIR,
     )
-    
+
     # Status logs went to stderr, display them
     if result.stderr:
-        for line in result.stderr.strip().split('\n'):
+        for line in result.stderr.strip().split("\n"):
             print(f"  {line}")
-    
+
     # Parse the transcript from stdout
     transcript = ""
-    for line in result.stdout.strip().split('\n'):
+    for line in result.stdout.strip().split("\n"):
         if line.startswith("TRANSCRIPT:"):
             transcript = line.replace("TRANSCRIPT:", "").strip()
-    
+
     if not transcript:
         print("⚠️ Could not hear anything. Please try again.")
         return None
-    
-    print(f"\n📝 You said: \"{transcript}\"")
+
+    print(f'\n📝 You said: "{transcript}"')
     return transcript
 
 
 # ============================================================
-# PHASE 2: THINK (LLM via Ollama API)
+# PHASE 2: THINK (Hybrid LLM Router)
 # ============================================================
 def think(user_message, conversation_history):
     """
-    Sends the user's message to Ollama's REST API.
-    Uses keep_alive=0 to force Ollama to unload the model from VRAM
-    immediately after generating the response.
+    Routes the prompt through the Hybrid Router:
+    Cloud API -> Local GGUF -> Inactive notice.
     """
     print("\n🧠 ORION IS THINKING...")
-    
-    # Build the messages array with conversation history
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(conversation_history)
-    messages.append({"role": "user", "content": user_message})
-    
+
+    # Build contextual prompt with conversation history
+    context = ""
+    if conversation_history:
+        recent = conversation_history[-6:]
+        context = "Recent conversation:\n" + "\n".join(
+            [f"{m['role'].capitalize()}: {m['content']}" for m in recent]
+        ) + "\n\n"
+
+    full_prompt = f"{context}User: {user_message}"
+
     try:
-        response = requests.post(
-            OLLAMA_URL,
-            json={
-                "model": LLM_MODEL,
-                "messages": messages,
-                "stream": False,
-                "keep_alive": 0  # THE SECRET WEAPON: Instantly unload from VRAM after response
-            },
-            timeout=120  # 2 minute timeout for slow CPU inference
-        )
-        response.raise_for_status()
-        
-        reply = response.json()["message"]["content"]
+        reply = asyncio.run(generate_response(full_prompt, system_prompt=SYSTEM_PROMPT))
         print(f"\n💬 ORION: {reply}")
         return reply
-        
-    except requests.exceptions.ConnectionError:
-        error_msg = "I cannot reach my brain. Is Ollama running? Start it with: ollama serve"
-        print(f"\n❌ {error_msg}")
-        return error_msg
-    except requests.exceptions.Timeout:
-        error_msg = "My brain took too long to respond. The model may be loading."
-        print(f"\n❌ {error_msg}")
-        return error_msg
     except Exception as e:
         error_msg = f"Brain error: {str(e)}"
         print(f"\n❌ {error_msg}")
@@ -128,12 +123,12 @@ def speak(text):
     VRAM is immediately freed when the process exits.
     """
     print("\n🗣️ ORION IS SPEAKING...")
-    
-    result = subprocess.run(
+
+    subprocess.run(
         [PYTHON_EXE, SPEAK_SCRIPT, text],
         capture_output=False,  # Let audio play through the speakers
         text=True,
-        cwd=BACKEND_DIR
+        cwd=BACKEND_DIR,
     )
 
 
@@ -153,38 +148,39 @@ def main():
     print("  Voice-Activated  •  Local  •  Private")
     print("=" * 60)
     print("\n  Press Ctrl+C at any time to exit.\n")
-    
+
     conversation_history = []
-    
+
     while True:
         try:
             # --- HEAR ---
             user_text = hear()
             if user_text is None:
                 continue
-            
+
             # Check for exit commands
             exit_phrases = ["exit", "quit", "stop", "goodbye", "shut down", "bye"]
             if any(phrase in user_text.lower() for phrase in exit_phrases):
                 speak("Goodbye Sriram. I will be here when you need me.")
                 print("\n👋 ORION has shut down gracefully.")
                 break
-            
+
             # --- THINK ---
             reply = think(user_text, conversation_history)
-            
-            # Save to conversation history (keep last 6 exchanges to stay within context window)
+
+            # Save to conversation history
             conversation_history.append({"role": "user", "content": user_text})
             conversation_history.append({"role": "assistant", "content": reply})
-            if len(conversation_history) > 12:  # 6 exchanges x 2 messages each
+            if len(conversation_history) > 12:
                 conversation_history = conversation_history[-12:]
-            
+
             # --- SPEAK ---
             speak(reply)
-            
+
         except KeyboardInterrupt:
             print("\n\n👋 ORION has shut down gracefully. Goodbye!")
             break
+
 
 if __name__ == "__main__":
     main()

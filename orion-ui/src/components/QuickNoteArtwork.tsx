@@ -1,11 +1,35 @@
 export const QUICK_NOTE_THEMES = [
-  'none', 'mountains', 'distant-hills', 'pine-forest', 'leafy-forest',
+  // Nature - Landscapes
+  'none',
+  'mountains', 'distant-hills', 'pine-forest', 'leafy-forest',
   'river', 'lakeside', 'meadow', 'grassland', 'wildflowers',
-  'flower-corner', 'botanical-leaves', 'clouds', 'sunrise', 'daytime-sky',
-  'sunset', 'moonlit-sky', 'stars', 'crescent-moon', 'rain',
-  'mist', 'abstract-curves', 'abstract-waves', 'abstract-dots', 'organic-shapes',
-  'geometric-pattern', 'paper-breeze', 'woodland', 'garden', 'small-birds',
-  'branches', 'coastal-horizon', 'night-landscape', 'city-silhouette', 'stationery-minimal'
+  // Floral
+  'flower-corner', 'botanical-leaves', 'cherry-blossom', 'rose-garden',
+  'sunflower-field', 'lotus-pond', 'fern-fronds', 'ivy-vine', 'dandelion', 'lavender-field',
+  // Sky & Weather
+  'clouds', 'sunrise', 'daytime-sky', 'sunset', 'moonlit-sky',
+  'stars', 'crescent-moon', 'rain', 'mist', 'rainbow',
+  // Ocean & Water
+  'ocean-waves', 'coastal-horizon', 'seashells', 'underwater', 'lighthouse',
+  'sailboat', 'anchor', 'tide-pools', 'seafoam', 'coral-reef',
+  // Forest & Wildlife
+  'woodland', 'garden', 'small-birds', 'branches', 'butterfly-garden',
+  'fox-meadow', 'deer-woods', 'mushrooms', 'owl-tree', 'dragonfly',
+  // Abstract & Geometric
+  'abstract-curves', 'abstract-waves', 'abstract-dots', 'organic-shapes',
+  'geometric-pattern', 'hexagon-grid', 'triangles', 'spiral', 'concentric-rings', 'grid-lines',
+  // Night & Celestial
+  'night-landscape', 'galaxy', 'aurora-borealis', 'shooting-star', 'planets',
+  'constellation', 'meteor-shower', 'full-moon', 'eclipse', 'nebula',
+  // Seasons
+  'autumn-leaves', 'winter-snowflakes', 'spring-buds', 'summer-heat', 'maple-leaves',
+  'pine-cones', 'icicles', 'tulips', 'harvest', 'frost-pattern',
+  // Stationery
+  'paper-breeze', 'stationery-minimal', 'notebook-ruled', 'dot-grid', 'watercolor-wash',
+  'ink-splatter', 'pen-strokes', 'stamp-corner', 'ribbon-trim', 'washi-border',
+  // Urban
+  'city-silhouette', 'rooftops', 'bridge', 'window-view', 'cobblestone',
+  'lanterns', 'clock-tower', 'garden-gate', 'archway', 'cafe-scene',
 ] as const;
 
 export type QuickNoteTheme = typeof QUICK_NOTE_THEMES[number];
@@ -19,391 +43,140 @@ export default function QuickNoteArtwork({ theme, color }: QuickNoteArtworkProps
   if (theme === 'none' || !theme) return null;
 
   let artwork = null;
+  let placement: 'bottom' | 'top' | 'full' = 'bottom';
 
   switch (theme) {
-    case 'mountains':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '120px', display: 'block' }}>
-          <path d="M0,50 L20,20 L35,40 L60,10 L85,35 L100,20 L100,50 Z" fill="currentColor" />
-          <path d="M30,50 L45,30 L65,45 L80,25 L100,45 L100,50 Z" fill="currentColor" opacity="0.6" />
-        </svg>
-      );
-      break;
-    case 'distant-hills':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '100px', display: 'block' }}>
-          <path d="M-10,50 Q20,30 50,45 T110,40 L110,50 Z" fill="currentColor" opacity="0.8" />
-          <path d="M-10,50 Q40,20 70,40 T110,35 L110,50 Z" fill="currentColor" opacity="0.5" />
-          <path d="M-10,50 Q30,10 60,35 T110,25 L110,50 Z" fill="currentColor" opacity="0.3" />
-        </svg>
-      );
-      break;
-    case 'pine-forest':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          {[5, 15, 28, 40, 55, 68, 80, 92].map((x, i) => (
-            <g key={i} transform={`translate(${x}, ${50 - (15 + (i % 3) * 4)})`}>
-              <path d="M0,0 L-4,12 L-1.5,12 L-6,24 L-2,24 L-8,36 L8,36 L2,24 L6,24 L1.5,12 L4,12 Z" fill="currentColor" opacity={0.6 + (i % 2) * 0.2} />
-            </g>
-          ))}
-        </svg>
-      );
-      break;
-    case 'leafy-forest':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          {[10, 30, 50, 70, 90].map((x, i) => (
-            <g key={i} transform={`translate(${x}, ${50 - (20 + (i % 2) * 5)})`}>
-              <rect x="-1" y="0" width="2" height="30" fill="currentColor" opacity="0.8" />
-              <circle cx="0" cy="-5" r="12" fill="currentColor" opacity="0.6" />
-              <circle cx="-6" cy="2" r="9" fill="currentColor" opacity="0.5" />
-              <circle cx="6" cy="0" r="10" fill="currentColor" opacity="0.5" />
-            </g>
-          ))}
-        </svg>
-      );
-      break;
-    case 'river':
-      artwork = (
-        <svg viewBox="0 0 100 20" preserveAspectRatio="none" style={{ width: '100%', height: '40px', display: 'block' }}>
-          <path d="M0,10 Q12.5,20 25,10 T50,10 T75,10 T100,10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M10,15 Q22.5,25 35,15 T60,15 T85,15 T110,15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-        </svg>
-      );
-      break;
-    case 'lakeside':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '60px', display: 'block' }}>
-          <path d="M0,25 Q25,25 50,28 T100,25 L100,40 L0,40 Z" fill="currentColor" opacity="0.3" />
-          <path d="M15,25 L15,15 L18,25 Z" fill="currentColor" opacity="0.7" />
-          <path d="M22,25 L22,12 L26,25 Z" fill="currentColor" opacity="0.6" />
-          <path d="M85,25 L85,18 L87,25 Z" fill="currentColor" opacity="0.8" />
-          <path d="M10,27 L90,27" stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
-          <path d="M20,32 L80,32" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
-        </svg>
-      );
-      break;
-    case 'meadow':
-      artwork = (
-        <svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ width: '100%', height: '50px', display: 'block' }}>
-          <path d="M-10,30 Q30,10 70,30 T110,20 L110,30 Z" fill="currentColor" opacity="0.4" />
-          {[...Array(15)].map((_, i) => (
-            <path key={i} d={`M${5 + i * 6},30 Q${7 + i * 6},22 ${6 + i * 6},15`} fill="none" stroke="currentColor" strokeWidth="1" opacity="0.6" />
-          ))}
-          {[...Array(8)].map((_, i) => (
-            <circle key={i} cx={8 + i * 11} cy={14 + (i % 3)} r="1.5" fill="currentColor" opacity="0.8" />
-          ))}
-        </svg>
-      );
-      break;
-    case 'grassland':
-      artwork = (
-        <svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ width: '100%', height: '40px', display: 'block' }}>
-          {[...Array(25)].map((_, i) => (
-            <path key={i} d={`M${i * 4 + (i % 3)},30 Q${i * 4 + 2},15 ${i * 4 + (i % 2 === 0 ? 4 : -1)},5`} fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity={0.4 + (i % 3) * 0.2} />
-          ))}
-        </svg>
-      );
-      break;
-    case 'wildflowers':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '60px', display: 'block' }}>
-          {[10, 25, 45, 60, 75, 90].map((x, i) => (
-            <g key={i} transform={`translate(${x}, 40)`}>
-              <path d={`M0,0 Q${(i % 2 === 0 ? -4 : 4)},-15 0,-30`} fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-              <circle cx="0" cy="-30" r="2.5" fill="currentColor" opacity="0.9" />
-              <path d={`M0,-10 Q${(i % 2 === 0 ? 5 : -5)},-15 ${(i % 2 === 0 ? 8 : -8)},-20`} fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-            </g>
-          ))}
-        </svg>
-      );
-      break;
-    case 'flower-corner':
-      artwork = (
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', bottom: 0, right: 0, width: '120px', height: '120px', display: 'block' }}>
-          <g transform="translate(80, 80)">
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
-              <ellipse key={i} cx="0" cy="-15" rx="5" ry="15" fill="currentColor" opacity="0.5" transform={`rotate(${angle})`} />
-            ))}
-            <circle cx="0" cy="0" r="6" fill="currentColor" opacity="0.8" />
-          </g>
-          <path d="M80,80 Q50,90 20,100" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.6" />
-          <path d="M80,80 Q90,50 100,20" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.6" />
-        </svg>
-      );
-      break;
-    case 'botanical-leaves':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          {[20, 50, 80].map((x, i) => (
-            <g key={i} transform={`translate(${x}, 50)`}>
-              <path d="M0,0 Q-10,-20 0,-40 Q10,-20 0,0 Z" fill="currentColor" opacity="0.4" />
-              <path d="M0,0 L0,-38" stroke="currentColor" strokeWidth="1" opacity="0.6" />
-              <path d="M0,-10 L-4,-15 M0,-20 L-5,-25 M0,-15 L4,-20 M0,-25 L5,-30" stroke="currentColor" strokeWidth="0.5" opacity="0.6" />
-            </g>
-          ))}
-        </svg>
-      );
-      break;
-    case 'clouds':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '70px', display: 'block' }}>
-          <g fill="currentColor" opacity="0.6">
-            <path d="M20,30 A8,8 0 0,1 25,15 A10,10 0 0,1 42,17 A6,6 0 0,1 45,28 Z" />
-            <path d="M60,35 A6,6 0 0,1 64,24 A8,8 0 0,1 78,26 A5,5 0 0,1 80,34 Z" opacity="0.4" />
-          </g>
-        </svg>
-      );
-      break;
-    case 'sunrise':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <circle cx="50" cy="40" r="15" fill="currentColor" opacity="0.8" />
-          <path d="M-10,50 Q25,40 50,40 T110,50 Z" fill="currentColor" opacity="0.5" />
-          <path d="M-10,50 Q25,45 50,45 T110,50 Z" fill="currentColor" opacity="0.7" />
-        </svg>
-      );
-      break;
-    case 'daytime-sky':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          <circle cx="85" cy="15" r="8" fill="currentColor" opacity="0.7" />
-          <path d="M10,30 Q15,20 25,20 Q35,15 45,25 Q55,25 60,30 Z" fill="currentColor" opacity="0.4" />
-          <path d="M30,40 Q40,30 55,32 Q65,28 75,38 Z" fill="currentColor" opacity="0.3" />
-        </svg>
-      );
-      break;
-    case 'sunset':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <circle cx="50" cy="40" r="20" fill="currentColor" opacity="0.4" />
-          <circle cx="50" cy="40" r="14" fill="currentColor" opacity="0.6" />
-          <circle cx="50" cy="40" r="8" fill="currentColor" opacity="0.8" />
-          <path d="M0,45 L100,45 M0,48 L100,48" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-        </svg>
-      );
-      break;
-    case 'moonlit-sky':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          <circle cx="80" cy="20" r="10" fill="currentColor" opacity="0.8" />
-          <path d="M20,35 Q30,25 45,28 Q55,22 65,33 Z" fill="currentColor" opacity="0.3" />
-          {[10, 25, 40, 55, 70].map((x, i) => (
-            <circle key={i} cx={x} cy={5 + (i % 3) * 8} r="0.8" fill="currentColor" opacity="0.9" />
-          ))}
-        </svg>
-      );
-      break;
-    case 'stars':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          {[...Array(20)].map((_, i) => (
-            <circle key={i} cx={5 + (i * 17) % 95} cy={5 + (i * 11) % 40} r={0.5 + (i % 3) * 0.4} fill="currentColor" opacity={0.4 + (i % 3) * 0.2} />
-          ))}
-          <path d="M20,10 L22,14 L26,14 L23,17 L24,21 L20,18 L16,21 L17,17 L14,14 L18,14 Z" fill="currentColor" opacity="0.6" />
-          <path d="M70,30 L71,33 L74,33 L72,35 L73,38 L70,36 L67,38 L68,35 L66,33 L69,33 Z" fill="currentColor" opacity="0.5" transform="scale(0.7) translate(30,-10)" />
-        </svg>
-      );
-      break;
-    case 'crescent-moon':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <path d="M80,15 A12,12 0 1,0 95,30 A14,14 0 0,1 80,15 Z" fill="currentColor" opacity="0.8" />
-          {[15, 35, 55, 75].map((x, i) => (
-            <circle key={i} cx={x} cy={10 + (i % 2) * 15} r="1" fill="currentColor" opacity="0.6" />
-          ))}
-        </svg>
-      );
-      break;
-    case 'rain':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          {[...Array(15)].map((_, i) => (
-            <line key={i} x1={5 + i * 6.5} y1={((i * 7) % 30)} x2={3 + i * 6.5} y2={((i * 7) % 30) + 12} stroke="currentColor" strokeWidth="0.8" opacity={0.3 + (i % 4) * 0.15} />
-          ))}
-        </svg>
-      );
-      break;
-    case 'mist':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '70px', display: 'block' }}>
-          <path d="M-10,30 Q20,15 50,25 T110,20 L110,40 L-10,40 Z" fill="currentColor" opacity="0.2" />
-          <path d="M-10,35 Q30,25 60,32 T110,30 L110,40 L-10,40 Z" fill="currentColor" opacity="0.3" />
-          <path d="M-10,40 Q40,35 70,38 T110,36 L110,40 L-10,40 Z" fill="currentColor" opacity="0.4" />
-        </svg>
-      );
-      break;
-    case 'abstract-curves':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <path d="M0,50 Q25,20 50,50 T100,50" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-          <path d="M0,50 Q30,30 60,50 T100,50" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-          <path d="M0,50 Q35,40 70,50 T100,50" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.2" />
-        </svg>
-      );
-      break;
-    case 'abstract-waves':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          <path d="M-10,20 Q15,0 40,20 T90,20 T110,20 L110,40 L-10,40 Z" fill="currentColor" opacity="0.3" />
-          <path d="M-10,28 Q20,12 50,28 T110,28 L110,40 L-10,40 Z" fill="currentColor" opacity="0.4" />
-        </svg>
-      );
-      break;
-    case 'abstract-dots':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          {[...Array(24)].map((_, i) => (
-            <circle key={i} cx={((i * 13) % 95) + 2.5} cy={((i * 17) % 45) + 2.5} r={0.5 + (i % 4) * 0.5} fill="currentColor" opacity={0.3 + (i % 3) * 0.2} />
-          ))}
-        </svg>
-      );
-      break;
-    case 'organic-shapes':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <path d="M10,40 Q25,15 45,30 Q60,40 50,50 L0,50 Z" fill="currentColor" opacity="0.4" />
-          <path d="M55,50 Q65,25 85,35 Q100,45 95,50 Z" fill="currentColor" opacity="0.5" />
-          <circle cx="80" cy="20" r="4" fill="currentColor" opacity="0.6" />
-          <circle cx="20" cy="15" r="2" fill="currentColor" opacity="0.4" />
-        </svg>
-      );
-      break;
-    case 'geometric-pattern':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '70px', display: 'block' }}>
-          {[...Array(5)].map((_, i) => (
-            <g key={i} transform={`translate(${i * 20}, 20)`}>
-              <polygon points="10,0 20,10 10,20 0,10" fill="currentColor" opacity="0.3" />
-              <polygon points="10,-10 20,0 10,10 0,0" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.5" />
-            </g>
-          ))}
-        </svg>
-      );
-      break;
-    case 'paper-breeze':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <path d="M-10,30 Q30,40 60,20 T110,10" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-          <path d="M10,40 Q40,50 70,30 T110,20" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
-          <path d="M75,10 Q80,5 85,10 Q80,15 75,10 Z" fill="currentColor" opacity="0.6" />
-          <path d="M25,25 Q30,20 35,25 Q30,30 25,25 Z" fill="currentColor" opacity="0.4" transform="rotate(-15 30 25)" />
-        </svg>
-      );
-      break;
-    case 'woodland':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <rect x="15" y="20" width="3" height="30" fill="currentColor" opacity="0.7" />
-          <rect x="50" y="10" width="4" height="40" fill="currentColor" opacity="0.6" />
-          <rect x="85" y="25" width="2" height="25" fill="currentColor" opacity="0.8" />
-          <path d="M16,30 L25,22 M15,35 L5,28 M52,25 L65,15 M50,32 L35,22 M86,35 L95,30 M85,38 L78,32" stroke="currentColor" strokeWidth="1" opacity="0.6" />
-        </svg>
-      );
-      break;
-    case 'garden':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '70px', display: 'block' }}>
-          <path d="M10,40 Q15,20 25,15 M35,40 Q30,25 20,20 M60,40 Q65,15 75,10 M90,40 Q85,25 75,20" stroke="currentColor" strokeWidth="1" fill="none" opacity="0.6" />
-          <circle cx="25" cy="15" r="3" fill="currentColor" opacity="0.8" />
-          <circle cx="20" cy="20" r="2" fill="currentColor" opacity="0.7" />
-          <circle cx="75" cy="10" r="4" fill="currentColor" opacity="0.8" />
-          <circle cx="75" cy="20" r="2" fill="currentColor" opacity="0.7" />
-        </svg>
-      );
-      break;
-    case 'small-birds':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          {[
-            { x: 20, y: 15, s: 1 },
-            { x: 35, y: 10, s: 0.7 },
-            { x: 45, y: 22, s: 0.8 },
-            { x: 75, y: 12, s: 1.2 },
-            { x: 88, y: 18, s: 0.9 }
-          ].map((b, i) => (
-            <path key={i} d={`M${b.x},${b.y} Q${b.x+3*b.s},${b.y-3*b.s} ${b.x+6*b.s},${b.y} Q${b.x+3*b.s},${b.y-1.5*b.s} ${b.x},${b.y}`} fill="none" stroke="currentColor" strokeWidth={1*b.s} opacity="0.8" />
-          ))}
-        </svg>
-      );
-      break;
-    case 'branches':
-      artwork = (
-        <svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100px', display: 'block' }}>
-          <path d="M-5,-5 Q30,10 60,5" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.6" />
-          <path d="M20,2 Q35,25 50,20" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-          <path d="M10,8 Q20,30 30,25" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-          {[
-            { x: 10, y: 8 }, { x: 25, y: 7 }, { x: 45, y: 6 },
-            { x: 22, y: 15 }, { x: 40, y: 22 }, { x: 18, y: 20 }
-          ].map((l, i) => (
-            <ellipse key={i} cx={l.x} cy={l.y} rx="3" ry="1.5" fill="currentColor" opacity="0.6" transform={`rotate(${15 + i*20} ${l.x} ${l.y})`} />
-          ))}
-        </svg>
-      );
-      break;
-    case 'coastal-horizon':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '70px', display: 'block' }}>
-          <path d="M0,25 L100,25" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-          <path d="M10,25 Q30,30 50,25 T90,25" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
-          <path d="M20,30 Q40,35 60,30 T100,30" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.3" />
-          <circle cx="70" cy="20" r="8" fill="currentColor" opacity="0.4" />
-        </svg>
-      );
-      break;
-    case 'night-landscape':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '90px', display: 'block' }}>
-          <path d="M0,50 L20,30 L45,45 L70,25 L100,45 L100,50 Z" fill="currentColor" opacity="0.4" />
-          <path d="M10,50 L35,35 L60,48 L85,30 L100,40 L100,50 Z" fill="currentColor" opacity="0.6" />
-          <circle cx="20" cy="15" r="3" fill="currentColor" opacity="0.8" />
-          <circle cx="85" cy="10" r="0.5" fill="currentColor" opacity="0.9" />
-          <circle cx="75" cy="15" r="0.5" fill="currentColor" opacity="0.7" />
-          <circle cx="90" cy="20" r="0.5" fill="currentColor" opacity="0.8" />
-        </svg>
-      );
-      break;
-    case 'city-silhouette':
-      artwork = (
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{ width: '100%', height: '70px', display: 'block' }}>
-          <path d="M0,40 L0,25 L8,25 L8,15 L16,15 L16,28 L22,28 L22,10 L32,10 L32,22 L40,22 L40,18 L50,18 L50,8 L60,8 L60,25 L68,25 L68,12 L78,12 L78,20 L88,20 L88,16 L100,16 L100,40 Z" fill="currentColor" opacity="0.5" />
-          <path d="M10,40 L10,30 L14,30 L14,40 M24,40 L24,32 L30,32 L30,40 M52,40 L52,25 L58,25 L58,40 M70,40 L70,28 L76,28 L76,40 M90,40 L90,30 L96,30 L96,40" fill="var(--bg-panel)" opacity="0.3" />
-        </svg>
-      );
-      break;
-    case 'stationery-minimal':
-      artwork = (
-        <svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{ width: '100%', height: '80px', display: 'block' }}>
-          <line x1="10" y1="20" x2="90" y2="20" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5" />
-          <line x1="10" y1="30" x2="90" y2="30" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5" />
-          <line x1="10" y1="40" x2="90" y2="40" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5" />
-          <circle cx="50" cy="10" r="3" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.6" />
-        </svg>
-      );
-      break;
-    default:
-      return null;
+    case 'mountains': artwork = (<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'120px',display:'block'}}><path d="M0,50 L20,20 L35,40 L60,10 L85,35 L100,20 L100,50 Z" fill="currentColor"/><path d="M30,50 L45,30 L65,45 L80,25 L100,45 L100,50 Z" fill="currentColor" opacity="0.6"/></svg>); break;
+    case 'distant-hills': artwork = (<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'100px',display:'block'}}><path d="M-10,50 Q20,30 50,45 T110,40 L110,50 Z" fill="currentColor" opacity="0.8"/><path d="M-10,50 Q40,20 70,40 T110,35 L110,50 Z" fill="currentColor" opacity="0.5"/><path d="M-10,50 Q30,10 60,35 T110,25 L110,50 Z" fill="currentColor" opacity="0.3"/></svg>); break;
+    case 'pine-forest': artwork = (<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[5,15,28,40,55,68,80,92].map((x,i)=>(<g key={i} transform={`translate(${x},${50-(15+(i%3)*4)})`}><path d="M0,0 L-4,12 L-1.5,12 L-6,24 L-2,24 L-8,36 L8,36 L2,24 L6,24 L1.5,12 L4,12 Z" fill="currentColor" opacity={0.6+(i%2)*0.2}/></g>))}</svg>); break;
+    case 'leafy-forest': artwork = (<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[10,30,50,70,90].map((x,i)=>(<g key={i} transform={`translate(${x},${50-(20+(i%2)*5)})`}><rect x="-1" y="0" width="2" height="30" fill="currentColor" opacity="0.8"/><circle cx="0" cy="-5" r="12" fill="currentColor" opacity="0.6"/><circle cx="-6" cy="2" r="9" fill="currentColor" opacity="0.5"/><circle cx="6" cy="0" r="10" fill="currentColor" opacity="0.5"/></g>))}</svg>); break;
+    case 'river': artwork = (<svg viewBox="0 0 100 20" preserveAspectRatio="none" style={{width:'100%',height:'40px',display:'block'}}><path d="M0,10 Q12.5,20 25,10 T50,10 T75,10 T100,10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M10,15 Q22.5,25 35,15 T60,15 T85,15 T110,15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5"/></svg>); break;
+    case 'lakeside': artwork = (<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'60px',display:'block'}}><path d="M0,25 Q25,25 50,28 T100,25 L100,40 L0,40 Z" fill="currentColor" opacity="0.3"/><path d="M15,25 L15,15 L18,25 Z" fill="currentColor" opacity="0.7"/><path d="M22,25 L22,12 L26,25 Z" fill="currentColor" opacity="0.6"/><path d="M85,25 L85,18 L87,25 Z" fill="currentColor" opacity="0.8"/><path d="M10,27 L90,27" stroke="currentColor" strokeWidth="0.5" opacity="0.4"/></svg>); break;
+    case 'meadow': artwork = (<svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{width:'100%',height:'50px',display:'block'}}><path d="M-10,30 Q30,10 70,30 T110,20 L110,30 Z" fill="currentColor" opacity="0.4"/>{[...Array(15)].map((_,i)=>(<path key={i} d={`M${5+i*6},30 Q${7+i*6},22 ${6+i*6},15`} fill="none" stroke="currentColor" strokeWidth="1" opacity="0.6"/>))}</svg>); break;
+    case 'grassland': artwork = (<svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{width:'100%',height:'40px',display:'block'}}>{[...Array(25)].map((_,i)=>(<path key={i} d={`M${i*4+(i%3)},30 Q${i*4+2},15 ${i*4+(i%2===0?4:-1)},5`} fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity={0.4+(i%3)*0.2}/>))}</svg>); break;
+    case 'wildflowers': artwork = (<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'60px',display:'block'}}>{[10,25,45,60,75,90].map((x,i)=>(<g key={i} transform={`translate(${x},40)`}><path d={`M0,0 Q${i%2===0?-4:4},-15 0,-30`} fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><circle cx="0" cy="-30" r="2.5" fill="currentColor" opacity="0.9"/></g>))}</svg>); break;
+
+    case 'flower-corner': placement='full'; artwork=(<svg viewBox="0 0 100 100" style={{position:'absolute',bottom:0,right:0,width:'120px',height:'120px',display:'block'}}><g transform="translate(80,80)">{[0,45,90,135,180,225,270,315].map((a,i)=>(<ellipse key={i} cx="0" cy="-15" rx="5" ry="15" fill="currentColor" opacity="0.5" transform={`rotate(${a})`}/>))}<circle cx="0" cy="0" r="6" fill="currentColor" opacity="0.8"/></g><path d="M80,80 Q50,90 20,100" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.6"/><path d="M80,80 Q90,50 100,20" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.6"/></svg>); break;
+    case 'botanical-leaves': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[20,50,80].map((x,i)=>(<g key={i} transform={`translate(${x},50)`}><path d="M0,0 Q-10,-20 0,-40 Q10,-20 0,0 Z" fill="currentColor" opacity="0.4"/><path d="M0,0 L0,-38" stroke="currentColor" strokeWidth="1" opacity="0.6"/></g>))}</svg>); break;
+    case 'cherry-blossom': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M10,60 Q20,40 15,20 Q25,15 30,30" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.7"/>{[{x:30,y:30},{x:50,y:35},{x:20,y:20},{x:45,y:22},{x:35,y:45},{x:60,y:28},{x:70,y:40},{x:80,y:20},{x:85,y:35},{x:90,y:50}].map((p,i)=>(<g key={i} transform={`translate(${p.x},${p.y})`}>{[0,72,144,216,288].map(a=>(<ellipse key={a} cx="0" cy="-4" rx="2" ry="4" fill="currentColor" opacity="0.6" transform={`rotate(${a})`}/>))}<circle cx="0" cy="0" r="1.5" fill="currentColor" opacity="0.9"/></g>))}</svg>); break;
+    case 'rose-garden': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[15,45,75].map((x,i)=>(<g key={i} transform={`translate(${x},50)`}><path d={`M0,0 Q${i%2?-3:3},-18 0,-35`} fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><ellipse cx="0" cy="-35" rx="7" ry="6" fill="currentColor" opacity="0.4"/><ellipse cx="0" cy="-35" rx="4" ry="3" fill="currentColor" opacity="0.7"/><circle cx="0" cy="-35" r="2" fill="currentColor" opacity="0.9"/></g>))}</svg>); break;
+    case 'sunflower-field': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}>{[20,50,80].map((x,i)=>(<g key={i} transform={`translate(${x},60)`}><rect x="-1" y="-40" width="2" height="40" fill="currentColor" opacity="0.6"/>{[0,45,90,135,180,225,270,315].map(a=>(<ellipse key={a} cx="0" cy="-48" rx="3" ry="7" fill="currentColor" opacity="0.5" transform={`rotate(${a} 0 -40)`}/>))}<circle cx="0" cy="-40" r="6" fill="currentColor" opacity="0.8"/></g>))}<path d="M0,60 Q50,50 100,60" fill="currentColor" opacity="0.3"/></svg>); break;
+    case 'lotus-pond': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}><path d="M-10,30 L110,30 L110,40 L-10,40 Z" fill="currentColor" opacity="0.2"/>{[20,55,80].map((x,i)=>(<g key={i} transform={`translate(${x},30)`}>{[-2,-1,0,1,2].map((p,j)=>(<ellipse key={j} cx={p*4} cy="-12" rx="3" ry="12" fill="currentColor" opacity="0.5" transform={`rotate(${p*10} ${p*4} 0)`}/>))}<circle cx="0" cy="-12" r="3" fill="currentColor" opacity="0.8"/></g>))}</svg>); break;
+    case 'fern-fronds': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[10,50,90].map((x,i)=>(<g key={i} transform={`translate(${x},50) rotate(${i*15-15})`}><path d="M0,0 Q5,-25 0,-50" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.7"/>{[...Array(7)].map((_,j)=>(<ellipse key={j} cx={j%2===0?5:-5} cy={-8*j-4} rx="4" ry="2.5" fill="currentColor" opacity="0.5" transform={`rotate(${j%2===0?30:-30} ${j%2===0?5:-5} ${-8*j-4})`}/>))}</g>))}</svg>); break;
+    case 'ivy-vine': placement='top'; artwork=(<svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{width:'100%',height:'60px',display:'block'}}><path d="M0,5 Q25,15 50,5 T100,5" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/>{[10,25,40,55,70,85].map((x,i)=>(<path key={i} d={`M${x},5 Q${x+(i%2===0?8:-8)},${15} ${x+(i%2===0?6:-6)},${21}`} fill="currentColor" opacity="0.5"/>))}</svg>); break;
+    case 'dandelion': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}>{[25,65].map((x,i)=>(<g key={i} transform={`translate(${x},60)`}><path d="M0,0 Q2,-20 0,-45" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.7"/>{[...Array(12)].map((_,j)=>{const a=j*30,r=18,rad=(a*Math.PI)/180;return(<line key={j} x1="0" y1="-45" x2={Math.cos(rad)*r} y2={-45+Math.sin(rad)*r} stroke="currentColor" strokeWidth="0.7" opacity="0.6"/>);})}{[...Array(12)].map((_,j)=>{const a=j*30,r=18,rad=(a*Math.PI)/180;return(<circle key={j} cx={Math.cos(rad)*r} cy={-45+Math.sin(rad)*r} r="1.5" fill="currentColor" opacity="0.7"/>);})}</g>))}</svg>); break;
+    case 'lavender-field': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M0,45 Q50,35 100,45 L100,50 L0,50 Z" fill="currentColor" opacity="0.3"/>{[...Array(16)].map((_,i)=>(<g key={i} transform={`translate(${i*6+3},44)`}><rect x="-0.5" y="-20" width="1" height="20" fill="currentColor" opacity="0.6"/>{[...Array(5)].map((_,j)=>(<ellipse key={j} cx={j%2===0?2:-2} cy={-5-j*3} rx="1.5" ry="2" fill="currentColor" opacity="0.7"/>))}</g>))}</svg>); break;
+
+    case 'clouds': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}><g fill="currentColor" opacity="0.6"><path d="M20,30 A8,8 0 0,1 25,15 A10,10 0 0,1 42,17 A6,6 0 0,1 45,28 Z"/><path d="M60,35 A6,6 0 0,1 64,24 A8,8 0 0,1 78,26 A5,5 0 0,1 80,34 Z" opacity="0.4"/><path d="M5,38 A4,4 0 0,1 8,30 A6,6 0 0,1 18,32 A4,4 0 0,1 20,38 Z" opacity="0.3"/></g></svg>); break;
+    case 'sunrise': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><circle cx="50" cy="40" r="15" fill="currentColor" opacity="0.8"/><path d="M-10,50 Q25,40 50,40 T110,50 Z" fill="currentColor" opacity="0.5"/>{[...Array(8)].map((_,i)=>{const a=(i*22.5-90)*Math.PI/180;return<line key={i} x1={50} y1={40} x2={50+Math.cos(a)*25} y2={40+Math.sin(a)*25} stroke="currentColor" strokeWidth="1" opacity="0.4"/>})}</svg>); break;
+    case 'daytime-sky': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><circle cx="85" cy="15" r="8" fill="currentColor" opacity="0.7"/><path d="M10,30 Q15,20 25,20 Q35,15 45,25 Q55,25 60,30 Z" fill="currentColor" opacity="0.4"/><path d="M30,40 Q40,30 55,32 Q65,28 75,38 Z" fill="currentColor" opacity="0.3"/></svg>); break;
+    case 'sunset': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><circle cx="50" cy="40" r="20" fill="currentColor" opacity="0.4"/><circle cx="50" cy="40" r="14" fill="currentColor" opacity="0.6"/><circle cx="50" cy="40" r="8" fill="currentColor" opacity="0.8"/><path d="M0,45 L100,45 M0,48 L100,48" stroke="currentColor" strokeWidth="1" opacity="0.5"/></svg>); break;
+    case 'moonlit-sky': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><circle cx="80" cy="20" r="10" fill="currentColor" opacity="0.8"/><path d="M20,35 Q30,25 45,28 Q55,22 65,33 Z" fill="currentColor" opacity="0.3"/>{[10,25,40,55,70].map((x,i)=>(<circle key={i} cx={x} cy={5+(i%3)*8} r="0.8" fill="currentColor" opacity="0.9"/>))}</svg>); break;
+    case 'stars': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[...Array(25)].map((_,i)=>(<circle key={i} cx={5+(i*17)%95} cy={5+(i*11)%40} r={0.5+(i%3)*0.4} fill="currentColor" opacity={0.4+(i%3)*0.2}/>))}<path d="M20,10 L22,14 L26,14 L23,17 L24,21 L20,18 L16,21 L17,17 L14,14 L18,14 Z" fill="currentColor" opacity="0.6"/></svg>); break;
+    case 'crescent-moon': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M80,15 A12,12 0 1,0 95,30 A14,14 0 0,1 80,15 Z" fill="currentColor" opacity="0.8"/>{[15,35,55,75].map((x,i)=>(<circle key={i} cx={x} cy={10+(i%2)*15} r="1" fill="currentColor" opacity="0.6"/>))}</svg>); break;
+    case 'rain': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[...Array(18)].map((_,i)=>(<line key={i} x1={5+i*5.5} y1={(i*7)%30} x2={3+i*5.5} y2={((i*7)%30)+12} stroke="currentColor" strokeWidth="0.8" opacity={0.3+(i%4)*0.15}/>))}<path d="M0,40 Q25,35 50,38 T100,38" fill="currentColor" opacity="0.2"/></svg>); break;
+    case 'mist': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}><path d="M-10,30 Q20,15 50,25 T110,20 L110,40 L-10,40 Z" fill="currentColor" opacity="0.2"/><path d="M-10,35 Q30,25 60,32 T110,30 L110,40 L-10,40 Z" fill="currentColor" opacity="0.3"/><path d="M-10,40 Q40,35 70,38 T110,36 L110,40 L-10,40 Z" fill="currentColor" opacity="0.4"/></svg>); break;
+    case 'rainbow': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}>{[35,30,25,20,15].map((r,i)=>(<path key={i} d={`M${50-r*1.5},60 A${r*1.5},${r*1.5} 0 0,1 ${50+r*1.5},60`} fill="none" stroke="currentColor" strokeWidth="3" opacity={0.1+i*0.08}/>))}<path d="M0,58 Q50,50 100,58 L100,60 L0,60 Z" fill="currentColor" opacity="0.15"/></svg>); break;
+
+    case 'ocean-waves': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}><path d="M-10,20 Q5,10 20,20 T50,20 T80,20 T110,20 L110,40 L-10,40 Z" fill="currentColor" opacity="0.3"/><path d="M-10,28 Q10,18 30,28 T70,28 T110,28 L110,40 L-10,40 Z" fill="currentColor" opacity="0.4"/><path d="M-10,35 Q15,28 40,35 T90,35 T110,35 L110,40 L-10,40 Z" fill="currentColor" opacity="0.5"/></svg>); break;
+    case 'coastal-horizon': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}><path d="M0,25 L100,25" stroke="currentColor" strokeWidth="1" opacity="0.5"/><path d="M10,25 Q30,30 50,25 T90,25" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.4"/><path d="M20,30 Q40,35 60,30 T100,30" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.3"/><circle cx="70" cy="20" r="8" fill="currentColor" opacity="0.4"/></svg>); break;
+    case 'seashells': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'60px',display:'block'}}>{[20,50,80].map((x,i)=>(<g key={i} transform={`translate(${x},30)`}><path d="M0,0 Q10,-10 0,-20 Q-10,-10 0,0 Z" fill="currentColor" opacity="0.5"/>{[...Array(5)].map((_,j)=>(<path key={j} d={`M0,0 Q${6-j},${-4*j-2} 0,${-8-j*2}`} fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.7"/>))}</g>))}<path d="M5,40 L95,40" stroke="currentColor" strokeWidth="1" opacity="0.3" strokeDasharray="3,3"/></svg>); break;
+    case 'underwater': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[10,30,50,70,90].map((x,i)=>(<g key={i} transform={`translate(${x},50)`}><path d={`M0,0 Q${i%2?5:-5},-15 0,-30`} fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><ellipse cx="0" cy="-30" rx="4" ry="8" fill="currentColor" opacity="0.4"/></g>))}{[...Array(8)].map((_,i)=>(<circle key={i} cx={10+i*11} cy={5+(i%3)*10} r={0.8+(i%3)*0.5} fill="currentColor" opacity="0.5"/>))}</svg>); break;
+    case 'lighthouse': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M0,45 Q50,35 100,45 L100,60 L0,60 Z" fill="currentColor" opacity="0.3"/><rect x="46" y="10" width="8" height="45" fill="currentColor" opacity="0.5"/><rect x="44" y="8" width="12" height="5" fill="currentColor" opacity="0.7"/><path d="M42,13 L58,13 L56,8 L44,8 Z" fill="currentColor" opacity="0.6"/>{[0,45,90,135].map((a,i)=>(<line key={i} x1="50" y1="13" x2={50+Math.cos(a*Math.PI/180)*20} y2={13+Math.sin(a*Math.PI/180)*20} stroke="currentColor" strokeWidth="0.7" opacity="0.3"/>))}</svg>); break;
+    case 'sailboat': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M-10,35 Q25,30 50,33 T110,35 L110,45 L-10,45 Z" fill="currentColor" opacity="0.3"/><path d="M-10,42 Q30,38 60,40 T110,42 L110,50 L-10,50 Z" fill="currentColor" opacity="0.4"/><path d="M45,35 Q35,20 35,5 L50,35 Z" fill="currentColor" opacity="0.6"/><path d="M52,35 Q65,18 62,5 L52,35 Z" fill="currentColor" opacity="0.5"/><path d="M35,35 Q45,38 60,35 L55,40 Q45,42 38,40 Z" fill="currentColor" opacity="0.7"/><rect x="47" y="5" width="1" height="30" fill="currentColor" opacity="0.7"/></svg>); break;
+    case 'anchor': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><g transform="translate(50,30)" opacity="0.5"><circle cx="0" cy="-15" r="5" fill="none" stroke="currentColor" strokeWidth="1.5"/><line x1="0" y1="-10" x2="0" y2="15" stroke="currentColor" strokeWidth="2"/><line x1="-12" y1="-5" x2="12" y2="-5" stroke="currentColor" strokeWidth="1.5"/><path d="M0,15 Q-15,15 -15,5 M0,15 Q15,15 15,5" fill="none" stroke="currentColor" strokeWidth="1.5"/></g><path d="M0,55 Q50,48 100,55" fill="currentColor" opacity="0.25"/></svg>); break;
+    case 'tide-pools': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'60px',display:'block'}}><ellipse cx="25" cy="32" rx="18" ry="6" fill="currentColor" opacity="0.2"/><ellipse cx="70" cy="30" rx="22" ry="7" fill="currentColor" opacity="0.2"/>{[10,30,55,75,90].map((x,i)=>(<path key={i} d={`M${x},${30+(i%2)*4} Q${x+5},${25+(i%2)*4} ${x+10},${30+(i%2)*4}`} fill="currentColor" opacity="0.5"/>))}<path d="M0,38 Q50,32 100,38 L100,40 L0,40 Z" fill="currentColor" opacity="0.3"/></svg>); break;
+    case 'seafoam': artwork=(<svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{width:'100%',height:'50px',display:'block'}}>{[...Array(12)].map((_,i)=>(<ellipse key={i} cx={5+i*8} cy={15+(i%3)*5} rx={3+(i%2)} ry={2+(i%3)} fill="currentColor" opacity={0.2+(i%4)*0.1}/>))}<path d="M0,28 Q25,22 50,25 T100,28" fill="currentColor" opacity="0.35"/></svg>); break;
+    case 'coral-reef': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[15,40,65,85].map((x,i)=>(<g key={i} transform={`translate(${x},50)`}>{i%2===0?(<path d="M0,0 L-5,-20 L-8,-35 M0,0 L5,-20 L8,-35 M0,0 L0,-25" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>):(<><path d="M0,0 Q0,-30 0,-40" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5"/>{[...Array(5)].map((_,j)=>(<circle key={j} cx={j%2===0?5:-5} cy={-8*j-8} r="3" fill="currentColor" opacity="0.5"/>))}</>)}</g>))}</svg>); break;
+
+    case 'woodland': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><rect x="15" y="20" width="3" height="30" fill="currentColor" opacity="0.7"/><rect x="50" y="10" width="4" height="40" fill="currentColor" opacity="0.6"/><rect x="85" y="25" width="2" height="25" fill="currentColor" opacity="0.8"/><path d="M16,30 L25,22 M15,35 L5,28 M52,25 L65,15 M50,32 L35,22 M86,35 L95,30 M85,38 L78,32" stroke="currentColor" strokeWidth="1" opacity="0.6"/></svg>); break;
+    case 'garden': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}><path d="M10,40 Q15,20 25,15 M35,40 Q30,25 20,20 M60,40 Q65,15 75,10 M90,40 Q85,25 75,20" stroke="currentColor" strokeWidth="1" fill="none" opacity="0.6"/><circle cx="25" cy="15" r="3" fill="currentColor" opacity="0.8"/><circle cx="75" cy="10" r="4" fill="currentColor" opacity="0.8"/><path d="M0,40 Q50,30 100,40" fill="currentColor" opacity="0.25"/></svg>); break;
+    case 'small-birds': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:20,y:15,s:1},{x:35,y:10,s:0.7},{x:45,y:22,s:0.8},{x:75,y:12,s:1.2},{x:88,y:18,s:0.9}].map((b,i)=>(<path key={i} d={`M${b.x},${b.y} Q${b.x+3*b.s},${b.y-3*b.s} ${b.x+6*b.s},${b.y} Q${b.x+3*b.s},${b.y-1.5*b.s} ${b.x},${b.y}`} fill="none" stroke="currentColor" strokeWidth={1*b.s} opacity="0.8"/>))}</svg>); break;
+    case 'branches': placement='top'; artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'100px',display:'block'}}><path d="M-5,-5 Q30,10 60,5" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.6"/><path d="M20,2 Q35,25 50,20" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5"/>{[{x:10,y:8},{x:25,y:7},{x:45,y:6},{x:22,y:15},{x:40,y:22}].map((l,i)=>(<ellipse key={i} cx={l.x} cy={l.y} rx="3" ry="1.5" fill="currentColor" opacity="0.6" transform={`rotate(${15+i*20} ${l.x} ${l.y})`}/>))}</svg>); break;
+    case 'butterfly-garden': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:20,y:20},{x:55,y:15},{x:80,y:30}].map((b,i)=>(<g key={i} transform={`translate(${b.x},${b.y})`}><path d="M0,0 Q-12,-12 -10,-20 Q-5,-22 0,-8" fill="currentColor" opacity="0.5"/><path d="M0,0 Q12,-12 10,-20 Q5,-22 0,-8" fill="currentColor" opacity="0.5"/><path d="M0,0 Q-8,8 -6,14 Q-2,15 0,5" fill="currentColor" opacity="0.35"/><path d="M0,0 Q8,8 6,14 Q2,15 0,5" fill="currentColor" opacity="0.35"/><line x1="0" y1="-20" x2="0" y2="14" stroke="currentColor" strokeWidth="0.5" opacity="0.7"/></g>))}</svg>); break;
+    case 'fox-meadow': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M0,45 Q30,35 60,42 T100,40 L100,50 L0,50 Z" fill="currentColor" opacity="0.3"/><g transform="translate(50,45)" opacity="0.6"><path d="M-10,0 Q-8,-10 0,-8 Q8,-10 10,0 Q5,-2 0,-3 Q-5,-2 -10,0 Z" fill="currentColor"/><path d="M-10,-8 L-14,-18 L-6,-12 Z" fill="currentColor"/><path d="M10,-8 L14,-18 L6,-12 Z" fill="currentColor"/><path d="M0,-3 L-4,5 L4,5 Z" fill="currentColor" opacity="0.5"/></g></svg>); break;
+    case 'deer-woods': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M0,50 Q25,40 50,48 T100,45 L100,60 L0,60 Z" fill="currentColor" opacity="0.25"/><g transform="translate(60,55)" opacity="0.55"><rect x="-2" y="-18" width="4" height="18" fill="currentColor"/><path d="M-6,-18 Q-4,-28 -2,-20 M6,-18 Q4,-28 2,-20" fill="currentColor"/><path d="M-2,-18 Q-8,-22 -10,-18 M2,-18 Q8,-22 10,-18" stroke="currentColor" strokeWidth="1" fill="none"/><ellipse cx="0" cy="-20" rx="6" ry="5" fill="currentColor"/><line x1="-2" y1="0" x2="-3" y2="8" stroke="currentColor" strokeWidth="1.5"/><line x1="2" y1="0" x2="3" y2="8" stroke="currentColor" strokeWidth="1.5"/></g></svg>); break;
+    case 'mushrooms': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}>{[20,50,75].map((x,i)=>(<g key={i} transform={`translate(${x},45)`} opacity="0.6"><rect x={-3+i} y="-12" width={6-i} height="12" fill="currentColor" opacity="0.5"/><path d={`M${-10-i},0 Q0,${-20-i*4} ${10+i},0 Z`} fill="currentColor"/>{i===0&&[...Array(3)].map((_,j)=>(<circle key={j} cx={-4+j*4} cy={-8-j*3} r="1" fill="white" opacity="0.5"/>))}</g>))}<path d="M0,48 Q50,42 100,48" fill="currentColor" opacity="0.2"/></svg>); break;
+    case 'owl-tree': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><rect x="45" y="20" width="10" height="40" fill="currentColor" opacity="0.5"/><path d="M30,40 Q50,25 70,40 Q60,30 50,28 Q40,30 30,40 Z" fill="currentColor" opacity="0.6"/><g transform="translate(50,18)" opacity="0.7"><ellipse cx="0" cy="0" rx="8" ry="10" fill="currentColor"/><circle cx="-3" cy="-2" r="2.5" fill="white" opacity="0.6"/><circle cx="3" cy="-2" r="2.5" fill="white" opacity="0.6"/><path d="M-3,3 Q0,5 3,3" fill="none" stroke="white" strokeWidth="0.7" opacity="0.8"/><path d="M-5,-8 L-6,-13 L-2,-10 Z M5,-8 L6,-13 L2,-10 Z" fill="currentColor"/></g></svg>); break;
+    case 'dragonfly': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}>{[{x:30,y:25},{x:65,y:20}].map((d,i)=>(<g key={i} transform={`translate(${d.x},${d.y}) rotate(${i*15-8})`} opacity="0.55"><line x1="0" y1="-15" x2="0" y2="12" stroke="currentColor" strokeWidth="1"/><ellipse cx="-8" cy="-5" rx="10" ry="4" fill="currentColor" opacity="0.4"/><ellipse cx="8" cy="-5" rx="10" ry="4" fill="currentColor" opacity="0.4"/><ellipse cx="-7" cy="3" rx="8" ry="3" fill="currentColor" opacity="0.3"/><ellipse cx="7" cy="3" rx="8" ry="3" fill="currentColor" opacity="0.3"/><circle cx="0" cy="-15" r="3" fill="currentColor" opacity="0.7"/></g>))}</svg>); break;
+
+    case 'abstract-curves': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M0,50 Q25,20 50,50 T100,50" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><path d="M0,50 Q30,30 60,50 T100,50" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4"/><path d="M0,50 Q35,40 70,50 T100,50" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.2"/></svg>); break;
+    case 'abstract-waves': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M-10,20 Q15,0 40,20 T90,20 T110,20 L110,40 L-10,40 Z" fill="currentColor" opacity="0.3"/><path d="M-10,28 Q20,12 50,28 T110,28 L110,40 L-10,40 Z" fill="currentColor" opacity="0.4"/></svg>); break;
+    case 'abstract-dots': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}>{[...Array(30)].map((_,i)=>(<circle key={i} cx={((i*13)%95)+2.5} cy={((i*17)%45)+2.5} r={0.5+(i%4)*0.5} fill="currentColor" opacity={0.2+(i%3)*0.15}/>))}</svg>); break;
+    case 'organic-shapes': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M10,40 Q25,15 45,30 Q60,40 50,50 L0,50 Z" fill="currentColor" opacity="0.4"/><path d="M55,50 Q65,25 85,35 Q100,45 95,50 Z" fill="currentColor" opacity="0.5"/><circle cx="80" cy="20" r="4" fill="currentColor" opacity="0.6"/><circle cx="20" cy="15" r="2" fill="currentColor" opacity="0.4"/></svg>); break;
+    case 'geometric-pattern': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}>{[...Array(5)].map((_,i)=>(<g key={i} transform={`translate(${i*20},20)`}><polygon points="10,0 20,10 10,20 0,10" fill="currentColor" opacity="0.3"/><polygon points="10,-10 20,0 10,10 0,0" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.5"/></g>))}</svg>); break;
+    case 'hexagon-grid': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:15,y:25},{x:35,y:15},{x:55,y:25},{x:75,y:15},{x:95,y:25},{x:25,y:40},{x:45,y:35},{x:65,y:40},{x:85,y:35}].map((h,i)=>{const pts=[0,60,120,180,240,300].map(a=>`${h.x+10*Math.cos(a*Math.PI/180)},${h.y+10*Math.sin(a*Math.PI/180)}`).join(' ');return<polygon key={i} points={pts} fill="none" stroke="currentColor" strokeWidth="0.7" opacity={0.2+(i%3)*0.1}/>;})}</svg>); break;
+    case 'triangles': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:10,y:45,s:16},{x:30,y:45,s:12},{x:50,y:45,s:20},{x:70,y:45,s:14},{x:90,y:45,s:18},{x:20,y:25,s:10},{x:60,y:22,s:14},{x:85,y:20,s:8}].map((t,i)=>(<polygon key={i} points={`${t.x},${t.y} ${t.x-t.s/2},${t.y-t.s*0.87} ${t.x+t.s/2},${t.y-t.s*0.87}`} fill={i%2===0?'currentColor':'none'} stroke="currentColor" strokeWidth="0.7" opacity={0.2+(i%4)*0.1}/>))}</svg>); break;
+    case 'spiral': placement='full'; artwork=(<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" style={{position:'absolute',bottom:0,right:'5%',width:'100px',height:'100px',display:'block'}}><path d="M50,50 Q70,30 50,20 Q30,10 20,30 Q10,50 25,65 Q40,80 65,75 Q85,70 90,50 Q95,25 75,10" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5" strokeLinecap="round"/></svg>); break;
+    case 'concentric-rings': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[40,30,20,12,5].map((r,i)=>(<ellipse key={i} cx="50" cy="55" rx={r*1.8} ry={r} fill="none" stroke="currentColor" strokeWidth="0.8" opacity={0.1+i*0.08}/>))}</svg>); break;
+    case 'grid-lines': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[...Array(6)].map((_,i)=>(<line key={`h${i}`} x1="0" y1={8*i+4} x2="100" y2={8*i+4} stroke="currentColor" strokeWidth="0.5" opacity={0.15+(i===0?0.15:0)}/>))}{[...Array(11)].map((_,i)=>(<line key={`v${i}`} x1={i*10} y1="0" x2={i*10} y2="50" stroke="currentColor" strokeWidth="0.5" opacity="0.12"/>))}</svg>); break;
+
+    case 'night-landscape': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M0,50 L20,30 L45,45 L70,25 L100,45 L100,50 Z" fill="currentColor" opacity="0.4"/><path d="M10,50 L35,35 L60,48 L85,30 L100,40 L100,50 Z" fill="currentColor" opacity="0.6"/><circle cx="20" cy="15" r="3" fill="currentColor" opacity="0.8"/>{[55,70,80,90].map((x,i)=>(<circle key={i} cx={x} cy={5+(i%3)*5} r="0.6" fill="currentColor" opacity="0.8"/>))}</svg>); break;
+    case 'galaxy': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><ellipse cx="50" cy="30" rx="35" ry="12" fill="currentColor" opacity="0.1" transform="rotate(-20 50 30)"/><ellipse cx="50" cy="30" rx="20" ry="7" fill="currentColor" opacity="0.15" transform="rotate(-20 50 30)"/>{[...Array(20)].map((_,i)=>(<circle key={i} cx={5+(i*19)%92} cy={5+(i*13)%42} r={0.4+(i%4)*0.3} fill="currentColor" opacity={0.3+(i%5)*0.1}/>))}</svg>); break;
+    case 'aurora-borealis': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M0,40 Q15,10 30,30 Q45,50 60,20 Q75,0 90,25 L100,30 L100,50 L0,50 Z" fill="currentColor" opacity="0.15"/><path d="M0,45 Q20,20 40,38 Q60,55 80,30 L100,35 L100,50 L0,50 Z" fill="currentColor" opacity="0.2"/><path d="M10,50 Q30,30 50,45 Q70,60 90,40 L100,42 L100,50 L0,50 Z" fill="currentColor" opacity="0.25"/></svg>); break;
+    case 'shooting-star': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M80,5 L15,35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/><path d="M80,5 L65,12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" opacity="0.8"/><circle cx="80" cy="5" r="2" fill="currentColor" opacity="0.9"/>{[{x:20,y:10},{x:60,y:25},{x:90,y:35}].map((s,i)=>(<circle key={i} cx={s.x} cy={s.y} r={0.5+(i%2)*0.4} fill="currentColor" opacity="0.5"/>))}</svg>); break;
+    case 'planets': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><circle cx="25" cy="25" r="12" fill="currentColor" opacity="0.4"/><ellipse cx="25" cy="25" rx="20" ry="5" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5"/><circle cx="72" cy="20" r="7" fill="currentColor" opacity="0.5"/><circle cx="90" cy="35" r="4" fill="currentColor" opacity="0.4"/>{[35,55,80].map((x,i)=>(<circle key={i} cx={x} cy={5+i*8} r="0.8" fill="currentColor" opacity="0.6"/>))}</svg>); break;
+    case 'constellation': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:20,y:10},{x:40,y:25},{x:60,y:8},{x:75,y:30},{x:55,y:40},{x:30,y:38},{x:85,y:15}].map((s,i)=>(<circle key={i} cx={s.x} cy={s.y} r="1.5" fill="currentColor" opacity="0.8"/>))}{[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[2,6]].map(([a,b],i)=>{const pts=[{x:20,y:10},{x:40,y:25},{x:60,y:8},{x:75,y:30},{x:55,y:40},{x:30,y:38},{x:85,y:15}];return<line key={i} x1={pts[a].x} y1={pts[a].y} x2={pts[b].x} y2={pts[b].y} stroke="currentColor" strokeWidth="0.5" opacity="0.35"/>;})}</svg>); break;
+    case 'meteor-shower': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x1:90,y1:5,x2:70,y2:20},{x1:75,y1:8,x2:55,y2:25},{x1:85,y1:2,x2:60,y2:22},{x1:95,y1:15,x2:78,y2:30},{x1:70,y1:3,x2:48,y2:20}].map((m,i)=>(<g key={i}><line x1={m.x1} y1={m.y1} x2={m.x2} y2={m.y2} stroke="currentColor" strokeWidth={0.8+(i%2)*0.5} opacity={0.4+(i%3)*0.15} strokeLinecap="round"/><circle cx={m.x1} cy={m.y1} r="1" fill="currentColor" opacity={0.6+(i%2)*0.2}/></g>))}</svg>); break;
+    case 'full-moon': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><circle cx="50" cy="25" r="18" fill="currentColor" opacity="0.5"/><circle cx="50" cy="25" r="14" fill="currentColor" opacity="0.3"/>{[{cx:44,cy:18,rx:4,ry:3},{cx:56,cy:30,rx:3,ry:2},{cx:48,cy:33,rx:2,ry:1.5}].map((c,i)=>(<ellipse key={i} cx={c.cx} cy={c.cy} rx={c.rx} ry={c.ry} fill="currentColor" opacity="0.15"/>))}</svg>); break;
+    case 'eclipse': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><circle cx="50" cy="25" r="18" fill="currentColor" opacity="0.7"/><circle cx="58" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.4"/>{[0,45,90,135,180,225,270,315].map((a,i)=>{const rad=a*Math.PI/180;return<line key={i} x1={50+Math.cos(rad)*18} y1={25+Math.sin(rad)*18} x2={50+Math.cos(rad)*25} y2={25+Math.sin(rad)*25} stroke="currentColor" strokeWidth="0.8" opacity="0.5"/>;})}</svg>); break;
+    case 'nebula': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><ellipse cx="40" cy="25" rx="28" ry="15" fill="currentColor" opacity="0.12"/><ellipse cx="55" cy="22" rx="20" ry="12" fill="currentColor" opacity="0.1"/><ellipse cx="45" cy="30" rx="15" ry="8" fill="currentColor" opacity="0.15"/>{[...Array(15)].map((_,i)=>(<circle key={i} cx={10+(i*19)%80} cy={5+(i*11)%42} r={0.4+(i%3)*0.3} fill="currentColor" opacity={0.4+(i%4)*0.1}/>))}</svg>); break;
+
+    case 'autumn-leaves': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:15,y:40,r:-20},{x:30,y:35,r:15},{x:50,y:45,r:-10},{x:65,y:38,r:25},{x:80,y:42,r:-30},{x:90,y:36,r:10}].map((l,i)=>(<g key={i} transform={`translate(${l.x},${l.y}) rotate(${l.r})`} opacity="0.65"><path d="M0,0 Q-5,-10 0,-20 Q5,-10 0,0 Z" fill="currentColor"/><line x1="0" y1="0" x2="0" y2="-18" stroke="currentColor" strokeWidth="0.5" opacity="0.5"/></g>))}</svg>); break;
+    case 'winter-snowflakes': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:15,y:15,s:10},{x:45,y:30,s:8},{x:75,y:12,s:12},{x:90,y:35,s:7},{x:30,y:42,s:9}].map((sf,i)=>(<g key={i} transform={`translate(${sf.x},${sf.y})`} opacity="0.5">{[0,30,60,90,120,150].map(a=>(<line key={a} x1="0" y1={-sf.s} x2="0" y2={sf.s} stroke="currentColor" strokeWidth="0.8" transform={`rotate(${a})`}/>))}</g>))}</svg>); break;
+    case 'spring-buds': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M0,45 Q50,35 100,45" fill="currentColor" opacity="0.25"/>{[10,25,45,60,75,88].map((x,i)=>(<g key={i} transform={`translate(${x},44)`}><path d={`M0,0 Q${i%2?2:-2},-12 0,-22`} fill="none" stroke="currentColor" strokeWidth="1" opacity="0.6"/><ellipse cx={-3} cy={-14} rx="3" ry="5" fill="currentColor" opacity="0.5" transform="rotate(-20 -3 -14)"/><ellipse cx={3} cy={-12} rx="3" ry="5" fill="currentColor" opacity="0.5" transform="rotate(20 3 -12)"/><ellipse cx="0" cy="-22" rx="2" ry="4" fill="currentColor" opacity="0.7"/></g>))}</svg>); break;
+    case 'summer-heat': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><circle cx="50" cy="20" r="14" fill="currentColor" opacity="0.5"/>{[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i)=>(<line key={i} x1={50+Math.cos(a*Math.PI/180)*16} y1={20+Math.sin(a*Math.PI/180)*16} x2={50+Math.cos(a*Math.PI/180)*22} y2={20+Math.sin(a*Math.PI/180)*22} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5"/>))}{[...Array(6)].map((_,i)=>(<path key={i} d={`M${5+i*16},50 Q${10+i*16},40 ${12+i*16},50`} fill="none" stroke="currentColor" strokeWidth="1" opacity="0.3"/>))}</svg>); break;
+    case 'maple-leaves': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:20,y:40},{x:50,y:35},{x:78,y:42}].map((m,i)=>(<g key={i} transform={`translate(${m.x},${m.y}) scale(0.8) rotate(${i*25-15})`} opacity="0.55"><path d="M0,0 L-3,-8 L-8,-6 L-4,-12 L-10,-14 L-3,-14 L-3,-20 L3,-14 L10,-14 L4,-12 L8,-6 L3,-8 Z" fill="currentColor"/><line x1="0" y1="0" x2="0" y2="5" stroke="currentColor" strokeWidth="1"/></g>))}</svg>); break;
+    case 'pine-cones': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}>{[20,55,82].map((x,i)=>(<g key={i} transform={`translate(${x},45) rotate(${i*10-8})`} opacity="0.55">{[...Array(5)].map((_,j)=>(<ellipse key={j} cx="0" cy={-j*6-3} rx={5-j*0.5} ry="3" fill="currentColor" opacity={0.5+j*0.1}/>))}<line x1="0" y1="0" x2="0" y2="5" stroke="currentColor" strokeWidth="1"/></g>))}</svg>); break;
+    case 'icicles': placement='top'; artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'60px',display:'block'}}><rect x="0" y="0" width="100" height="8" fill="currentColor" opacity="0.3"/>{[5,14,22,30,40,49,57,67,75,83,92].map((x,i)=>(<path key={i} d={`M${x},8 L${x-2-(i%3)},${20+(i%4)*5} L${x+2+(i%2)},8 Z`} fill="currentColor" opacity={0.4+(i%3)*0.15}/>))}</svg>); break;
+    case 'tulips': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}>{[15,40,65,88].map((x,i)=>(<g key={i} transform={`translate(${x},60)`}><path d={`M0,0 Q${i%2?-2:2},-30 0,-50`} fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6"/><path d={`M-4,-25 Q-10,-22 -8,-15`} fill="currentColor" opacity="0.4"/><path d="M-5,-50 Q0,-60 5,-50 Q8,-38 0,-35 Q-8,-38 -5,-50 Z" fill="currentColor" opacity="0.65"/></g>))}<path d="M0,58 Q50,52 100,58" fill="currentColor" opacity="0.2"/></svg>); break;
+    case 'harvest': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M0,40 Q50,30 100,40 L100,50 L0,50 Z" fill="currentColor" opacity="0.25"/>{[20,45,68].map((x,i)=>(<g key={i} transform={`translate(${x},39)`} opacity="0.6"><ellipse cx="0" cy="-10" rx="6" ry="10" fill="currentColor" opacity="0.5"/><path d="M0,0 L0,-18" stroke="currentColor" strokeWidth="1"/><path d="M-3,-5 Q-10,-8 -8,-14 M3,-5 Q10,-8 8,-14" fill="currentColor" opacity="0.4"/></g>))}</svg>); break;
+    case 'frost-pattern': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{cx:20,cy:30},{cx:55,cy:20},{cx:80,cy:38}].map((f,i)=>(<g key={i} transform={`translate(${f.cx},${f.cy})`} opacity="0.4">{[0,45,90,135].map(a=>(<g key={a} transform={`rotate(${a})`}><line x1="0" y1="-12" x2="0" y2="12" stroke="currentColor" strokeWidth="0.7"/><line x1="-4" y1="-8" x2="0" y2="-12" stroke="currentColor" strokeWidth="0.5"/><line x1="4" y1="-8" x2="0" y2="-12" stroke="currentColor" strokeWidth="0.5"/></g>))}</g>))}</svg>); break;
+
+    case 'paper-breeze': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}><path d="M-10,30 Q30,40 60,20 T110,10" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5"/><path d="M10,40 Q40,50 70,30 T110,20" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.4"/><path d="M75,10 Q80,5 85,10 Q80,15 75,10 Z" fill="currentColor" opacity="0.6"/><path d="M25,25 Q30,20 35,25 Q30,30 25,25 Z" fill="currentColor" opacity="0.4" transform="rotate(-15 30 25)"/></svg>); break;
+    case 'stationery-minimal': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><line x1="10" y1="20" x2="90" y2="20" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5"/><line x1="10" y1="30" x2="90" y2="30" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5"/><line x1="10" y1="40" x2="90" y2="40" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5"/><circle cx="50" cy="10" r="3" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.6"/></svg>); break;
+    case 'notebook-ruled': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[10,20,30,40].map((y,i)=>(<line key={i} x1={i===3?'30':'8'} y1={y} x2="92" y2={y} stroke="currentColor" strokeWidth={i===0?'1':'0.5'} opacity={i===0?'0.5':'0.3'}/>))}<line x1="20" y1="0" x2="20" y2="50" stroke="currentColor" strokeWidth="0.8" opacity="0.3" strokeDasharray="3,3"/></svg>); break;
+    case 'dot-grid': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[...Array(8)].map((_,row)=>[...Array(12)].map((_,col)=>(<circle key={`${row}-${col}`} cx={5+col*8.5} cy={5+row*6} r="0.8" fill="currentColor" opacity="0.3"/>)))}</svg>); break;
+    case 'watercolor-wash': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><ellipse cx="30" cy="35" rx="28" ry="12" fill="currentColor" opacity="0.12"/><ellipse cx="65" cy="38" rx="32" ry="10" fill="currentColor" opacity="0.1"/><ellipse cx="50" cy="30" rx="40" ry="15" fill="currentColor" opacity="0.08"/><path d="M5,48 Q30,42 60,46 T100,44 L100,50 L0,50 Z" fill="currentColor" opacity="0.2"/></svg>); break;
+    case 'ink-splatter': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}>{[{x:20,y:35,r:6},{x:35,y:42,r:3},{x:60,y:38,r:8},{x:78,y:45,r:4},{x:90,y:35,r:5},{x:48,y:48,r:2}].map((s,i)=>(<circle key={i} cx={s.x} cy={s.y} r={s.r} fill="currentColor" opacity={0.15+(i%3)*0.07}/>))}</svg>); break;
+    case 'pen-strokes': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M5,40 Q20,30 35,38 Q50,45 65,35 Q80,25 95,33" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.35"/><path d="M10,48 Q30,40 50,45 Q70,50 90,44" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.25"/></svg>); break;
+    case 'stamp-corner': placement='full'; artwork=(<svg viewBox="0 0 80 80" style={{position:'absolute',bottom:8,right:8,width:'80px',height:'80px',display:'block'}}><rect x="10" y="10" width="60" height="60" rx="4" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.4" strokeDasharray="3,2"/><rect x="18" y="18" width="44" height="44" rx="2" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.3"/><circle cx="40" cy="40" r="14" fill="currentColor" opacity="0.15"/><path d="M30,40 Q40,28 50,40 Q40,52 30,40 Z" fill="currentColor" opacity="0.25"/></svg>); break;
+    case 'ribbon-trim': placement='top'; artwork=(<svg viewBox="0 0 100 12" preserveAspectRatio="none" style={{width:'100%',height:'20px',display:'block'}}><rect x="0" y="0" width="100" height="12" fill="currentColor" opacity="0.12"/><path d="M0,6 Q5,0 10,6 T20,6 T30,6 T40,6 T50,6 T60,6 T70,6 T80,6 T90,6 T100,6" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4"/></svg>); break;
+    case 'washi-border': placement='top'; artwork=(<svg viewBox="0 0 100 10" preserveAspectRatio="none" style={{width:'100%',height:'18px',display:'block'}}>{[...Array(10)].map((_,i)=>(<rect key={i} x={i*10} y="0" width="9.5" height="10" rx="0.5" fill="currentColor" opacity={0.15+(i%2)*0.08}/>))}{[...Array(10)].map((_,i)=>(<circle key={i} cx={i*10+5} cy="5" r="1.5" fill="currentColor" opacity="0.25"/>))}</svg>); break;
+
+    case 'city-silhouette': artwork=(<svg viewBox="0 0 100 40" preserveAspectRatio="none" style={{width:'100%',height:'70px',display:'block'}}><path d="M0,40 L0,25 L8,25 L8,15 L16,15 L16,28 L22,28 L22,10 L32,10 L32,22 L40,22 L40,18 L50,18 L50,8 L60,8 L60,25 L68,25 L68,12 L78,12 L78,20 L88,20 L88,16 L100,16 L100,40 Z" fill="currentColor" opacity="0.5"/></svg>); break;
+    case 'rooftops': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M0,50 L0,30 L15,18 L30,30 L30,50 Z" fill="currentColor" opacity="0.4"/><path d="M28,50 L28,22 L40,12 L52,22 L52,50 Z" fill="currentColor" opacity="0.5"/><path d="M50,50 L50,28 L60,20 L70,28 L70,50 Z" fill="currentColor" opacity="0.4"/><path d="M68,50 L68,25 L82,15 L96,25 L96,50 Z" fill="currentColor" opacity="0.45"/><rect x="36" y="12" width="2" height="12" fill="currentColor" opacity="0.35"/></svg>); break;
+    case 'bridge': artwork=(<svg viewBox="0 0 100 50" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><path d="M5,40 Q50,15 95,40" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5"/><path d="M5,42 Q50,17 95,42" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.3"/>{[15,30,50,70,85].map((x,i)=>{const y=40-Math.sin((x/100)*Math.PI)*25;return<line key={i} x1={x} y1={40} x2={x} y2={y} stroke="currentColor" strokeWidth="0.8" opacity="0.4"/>;})}<line x1="5" y1="40" x2="95" y2="40" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/></svg>); break;
+    case 'window-view': placement='full'; artwork=(<svg viewBox="0 0 80 90" style={{position:'absolute',bottom:10,left:15,width:'80px',height:'90px',display:'block'}}><rect x="5" y="5" width="70" height="80" rx="3" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.35"/><line x1="5" y1="45" x2="75" y2="45" stroke="currentColor" strokeWidth="1.5" opacity="0.3"/><line x1="40" y1="5" x2="40" y2="85" stroke="currentColor" strokeWidth="1.5" opacity="0.3"/><circle cx="22" cy="25" r="7" fill="currentColor" opacity="0.15"/>{[10,20,30,40].map((y,i)=>(<line key={i} x1="45" y1={y} x2="70" y2={y} stroke="currentColor" strokeWidth="0.5" opacity="0.2"/>))}</svg>); break;
+    case 'cobblestone': artwork=(<svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{width:'100%',height:'45px',display:'block'}}>{[...Array(3)].map((_,row)=>[...Array(7)].map((_,col)=>(<ellipse key={`${row}-${col}`} cx={(col*14)+(row%2)*7+7} cy={row*10+5} rx="5.5" ry="4" fill="none" stroke="currentColor" strokeWidth="0.7" opacity="0.3"/>)))}</svg>); break;
+    case 'lanterns': artwork=(<svg viewBox="0 0 100 60" preserveAspectRatio="none" style={{width:'100%',height:'90px',display:'block'}}>{[20,50,80].map((x,i)=>(<g key={i} transform={`translate(${x},0)`} opacity="0.55"><line x1="0" y1="0" x2="0" y2="15" stroke="currentColor" strokeWidth="0.8"/><path d="M-6,15 Q-8,25 -6,35 Q0,40 6,35 Q8,25 6,15 Z" fill="currentColor" opacity="0.4"/><rect x="-5" y="14" width="10" height="3" rx="1" fill="currentColor" opacity="0.6"/><rect x="-4" y="34" width="8" height="3" rx="1" fill="currentColor" opacity="0.6"/><path d="M-3,18 L3,18 M-3,24 L3,24 M-3,30 L3,30" stroke="currentColor" strokeWidth="0.5" opacity="0.5"/></g>))}</svg>); break;
+    case 'clock-tower': artwork=(<svg viewBox="0 0 100 70" preserveAspectRatio="none" style={{width:'100%',height:'100px',display:'block'}}><path d="M42,70 L42,20 L58,20 L58,70 Z" fill="currentColor" opacity="0.4"/><path d="M38,22 L50,8 L62,22 Z" fill="currentColor" opacity="0.55"/><circle cx="50" cy="35" r="8" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/><line x1="50" y1="35" x2="50" y2="28" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.7"/><line x1="50" y1="35" x2="55" y2="35" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.7"/><path d="M0,68 Q50,60 100,68" fill="currentColor" opacity="0.2"/></svg>); break;
+    case 'garden-gate': artwork=(<svg viewBox="0 0 100 70" preserveAspectRatio="none" style={{width:'100%',height:'100px',display:'block'}}><rect x="30" y="20" width="5" height="50" fill="currentColor" opacity="0.4"/><rect x="65" y="20" width="5" height="50" fill="currentColor" opacity="0.4"/><path d="M30,22 Q50,5 70,22" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5"/>{[35,42,50,57,63].map((x,i)=>(<line key={i} x1={x} y1="22" x2={x} y2="55" stroke="currentColor" strokeWidth="1.2" opacity="0.35"/>))}<line x1="30" y1="38" x2="70" y2="38" stroke="currentColor" strokeWidth="1" opacity="0.35"/><path d="M0,68 Q50,58 100,68" fill="currentColor" opacity="0.2"/></svg>); break;
+    case 'archway': artwork=(<svg viewBox="0 0 100 70" preserveAspectRatio="none" style={{width:'100%',height:'100px',display:'block'}}><path d="M25,70 L25,35 Q25,10 50,10 Q75,10 75,35 L75,70" fill="none" stroke="currentColor" strokeWidth="2.5" opacity="0.4"/><path d="M30,70 L30,37 Q30,16 50,16 Q70,16 70,37 L70,70" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.25"/>{[...Array(6)].map((_,i)=>(<line key={`l${i}`} x1="25" y1={35+i*6} x2="30" y2={35+i*6} stroke="currentColor" strokeWidth="0.8" opacity="0.3"/>))}{[...Array(6)].map((_,i)=>(<line key={`r${i}`} x1="70" y1={35+i*6} x2="75" y2={35+i*6} stroke="currentColor" strokeWidth="0.8" opacity="0.3"/>))}<path d="M0,68 Q50,60 100,68" fill="currentColor" opacity="0.2"/></svg>); break;
+    case 'cafe-scene': artwork=(<svg viewBox="0 0 100 55" preserveAspectRatio="none" style={{width:'100%',height:'80px',display:'block'}}><rect x="35" y="30" width="30" height="20" rx="1" fill="currentColor" opacity="0.3"/><ellipse cx="50" cy="30" rx="15" ry="4" fill="currentColor" opacity="0.35"/><rect x="46" y="20" width="8" height="12" fill="currentColor" opacity="0.2"/><path d="M58,35 Q65,32 68,36" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.5"/><ellipse cx="63" cy="35" rx="5" ry="3" fill="currentColor" opacity="0.25"/>{[20,80].map((x,i)=>(<g key={i} transform={`translate(${x},50)`} opacity="0.4"><line x1="0" y1="0" x2="0" y2="-12" stroke="currentColor" strokeWidth="2"/><ellipse cx="0" cy="-12" rx="7" ry="3" fill="currentColor" opacity="0.5"/></g>))}<path d="M0,53 Q50,47 100,53" fill="currentColor" opacity="0.2"/></svg>); break;
+
+    default: return null;
   }
 
+  const isTop = placement === 'top';
+  const isFull = placement === 'full';
+
   return (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: theme === 'branches' ? 'auto' : 0,
-        top: theme === 'branches' ? 0 : 'auto',
-        left: 0,
-        right: 0,
-        color: color,
-        opacity: 0.1, // Subtle, 10% opacity as requested
-        pointerEvents: 'none',
-        overflow: 'hidden',
-        borderBottomLeftRadius: theme === 'branches' ? 0 : '12px',
-        borderBottomRightRadius: theme === 'branches' ? 0 : '12px',
-        borderTopLeftRadius: theme === 'branches' ? '12px' : 0,
-        borderTopRightRadius: theme === 'branches' ? '12px' : 0,
-      }}
-    >
+    <div style={{
+      position: 'absolute',
+      bottom: isTop ? 'auto' : 0,
+      top: isTop ? 0 : (isFull ? 0 : 'auto'),
+      left: 0,
+      right: 0,
+      color: color,
+      opacity: 0.12,
+      pointerEvents: 'none',
+      overflow: 'hidden',
+      borderBottomLeftRadius: isTop ? 0 : '12px',
+      borderBottomRightRadius: isTop ? 0 : '12px',
+      borderTopLeftRadius: isTop || isFull ? '12px' : 0,
+      borderTopRightRadius: isTop || isFull ? '12px' : 0,
+    }}>
       {artwork}
     </div>
   );

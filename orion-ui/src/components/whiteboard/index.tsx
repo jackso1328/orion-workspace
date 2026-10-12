@@ -13,6 +13,32 @@ export default function WhiteboardModule() {
   const [showExport, setShowExport] = useState(false);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
 
+  const handleUploadMedia = (type: 'image' | 'video', dataUrl: string) => {
+    const id = crypto.randomUUID();
+    const w = 400;
+    const h = 300;
+    // Calculate rough center based on camera
+    // Assuming container is ~800x600 for a guess
+    const cx = 400;
+    const cy = 300;
+    const x = (cx - state.camera.x) / state.camera.z - w/2;
+    const y = (cy - state.camera.y) / state.camera.z - h/2;
+    
+    state.addObject({
+      id,
+      type,
+      x,
+      y,
+      width: w,
+      height: h,
+      rotation: 0,
+      zIndex: Object.keys(state.currentPage.objects).length,
+      locked: false,
+      dataUrl,
+      ...(type === 'image' ? { crop: { x: 0, y: 0, width: 1, height: 1 } } : {})
+    } as any);
+  };
+
   const handleExport = async (type: string) => {
     setShowExport(false);
     if (type === 'ZIP' || type === 'PPTX' || type === 'PDF') {
@@ -114,7 +140,7 @@ export default function WhiteboardModule() {
         borderBottom: 'none',
         position: 'relative',
       }}>
-        <WhiteboardToolbar tool={state.tool} setTool={state.setTool} />
+        <WhiteboardToolbar tool={state.tool} setTool={state.setTool} onUploadMedia={handleUploadMedia} />
         {exportStatus && (
           <div style={{
             position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)',

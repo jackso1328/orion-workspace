@@ -12,7 +12,7 @@ export type BaseObject = {
 };
 
 export type ShapeObject = BaseObject & {
-  type: 'rectangle' | 'ellipse' | 'diamond';
+  type: 'rectangle' | 'ellipse' | 'diamond' | 'triangle';
   strokeColor: string;
   fillColor?: string;
   strokeWidth: number;
@@ -51,6 +51,12 @@ export type FreehandObject = BaseObject & {
 export type ImageObject = BaseObject & {
   type: 'image';
   dataUrl: string;
+  crop?: { x: number; y: number; width: number; height: number }; // normalized 0 to 1
+};
+
+export type VideoObject = BaseObject & {
+  type: 'video';
+  dataUrl: string;
 };
 
 export type WhiteboardObject =
@@ -59,7 +65,8 @@ export type WhiteboardObject =
   | StickyObject
   | ArrowObject
   | FreehandObject
-  | ImageObject;
+  | ImageObject
+  | VideoObject;
 
 export type ToolType = 
   | 'select' 
@@ -70,10 +77,12 @@ export type ToolType =
   | 'rectangle' 
   | 'ellipse' 
   | 'diamond' 
+  | 'triangle' 
   | 'arrow' 
   | 'line' 
   | 'sticky' 
-  | 'image';
+  | 'image'
+  | 'video';
 
 export type Camera = {
   x: number;

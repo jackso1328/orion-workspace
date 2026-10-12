@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { Settings, LayoutDashboard, Briefcase, TerminalSquare, Target, Palette, BookOpen, Calendar, CheckSquare, Clock, Search, Inbox,
   GraduationCap, FileText, ClipboardList, HelpCircle, 
   PenTool, Folder,  Layers, 
@@ -8,6 +9,7 @@ import { Settings, LayoutDashboard, Briefcase, TerminalSquare, Target, Palette, 
 import { useOrionStore } from "../store/useOrionStore";
 import { ORION_MODES } from "../config/modes";
 import ModeSelector from "./ModeSelector";
+import PermanentAiStatusBadge from "./PermanentAiStatusBadge";
 
 const ROUTE_REGISTRY: Array<{path: string, label: string, icon: any, section: 'global' | 'knowledge' | 'system' | 'primary' | 'none'}> = [
   { path: "/inbox", label: "Inbox", icon: Inbox, section: 'global' },
@@ -50,15 +52,21 @@ const ROUTE_REGISTRY: Array<{path: string, label: string, icon: any, section: 'g
 ];
 
 export default function Sidebar() {
-  const { inbox } = useOrionStore();
+  const { inbox, sidebarCollapsedGroups, toggleSidebarGroup } = useOrionStore();
   const unprocessedCount = inbox.filter(i => !i.processedAt).length;
   const activeModeId = useOrionStore(state => state.activeMode);
   const activeMode = ORION_MODES[activeModeId] || ORION_MODES['study'];
 
-  const globalRoutes = ROUTE_REGISTRY.filter(r => r.section === 'global');
-  const knowledgeRoutes = ROUTE_REGISTRY.filter(r => r.section === 'knowledge');
-  const primaryRoutes = ROUTE_REGISTRY.filter(r => r.section === 'primary' && activeMode.primaryRoutes.includes(r.path));
   const bottomRoute = ROUTE_REGISTRY.find(r => r.section === 'system');
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!activeMode.navigationGroups) return;
+    const activeGroup = activeMode.navigationGroups.find(g => g.routes.includes(location.pathname));
+    if (activeGroup && sidebarCollapsedGroups.includes(activeGroup.id)) {
+      toggleSidebarGroup(activeGroup.id);
+    }
+  }, [location.pathname, activeMode.navigationGroups]);
 
   return (
     <aside className="app-sidebar" >
@@ -73,54 +81,63 @@ export default function Sidebar() {
       <ModeSelector />
 
       <div className="sidebar-scroll-area">
-        <div className="sidebar-section">
-          <h4 className="sidebar-label">WORKSPACE</h4>
-          <nav className="sidebar-nav">
-            {globalRoutes.map(r => {
-              const Icon = r.icon;
-              return (
-                <NavLink key={r.path} to={r.path} className="nav-item" title={r.label}>
-                  <Icon size={18} /> <span>{r.label}</span>
-                  {r.path === '/inbox' && unprocessedCount > 0 && <span className="sidebar-badge">{unprocessedCount}</span>}
-                </NavLink>
-              );
-            })}
-          </nav>
-        </div>
+        {activeMode.navigationGroups?.map(group => {
+           const isCollapsed = sidebarCollapsedGroups.includes(group.id);
+           
+           return (
+             <div className="sidebar-section" key={group.id}>
+               <div 
+                 className="sidebar-label" 
+                 onClick={() => group.collapsible && toggleSidebarGroup(group.id)}
+                 style={{ 
+                   display: 'flex', 
+                   justifyContent: 'space-between', 
+                   cursor: group.collapsible ? 'pointer' : 'default', 
+                   userSelect: 'none',
+                   transition: 'opacity 0.2s',
+                   opacity: isCollapsed ? 0.6 : 1
+                 }}
+               >
+                 <span>{group.label}</span>
+                 {group.collapsible && (
+                   <span style={{ fontSize: '0.65rem', opacity: 0.6, transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s ease-in-out' }}>
+                     ▼
+                   </span>
+                 )}
+               </div>
+               
+               <div style={{
+                 display: 'grid',
+                 gridTemplateRows: isCollapsed ? '0fr' : '1fr',
+                 transition: 'grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                 overflow: 'hidden'
+               }}>
+                 <nav className="sidebar-nav" style={{ minHeight: 0 }}>
+                   {group.routes.map(path => {
+                     const r = ROUTE_REGISTRY.find(route => route.path === path);
+                     if (!r) return null;
+                     const Icon = r.icon;
+                     return (
+                       <NavLink key={r.path} to={r.path} className="nav-item" title={r.label}>
+                         <Icon size={18} /> <span>{r.label}</span>
+                         {r.path === '/inbox' && unprocessedCount > 0 && <span className="sidebar-badge">{unprocessedCount}</span>}
+                       </NavLink>
+                     );
+                   })}
+                 </nav>
+               </div>
+             </div>
+           );
+        })}
 
-        {primaryRoutes.length > 0 && (
-          <div className="sidebar-section">
-            <h4 className="sidebar-label">{activeMode.name.toUpperCase()}</h4>
-            <nav className="sidebar-nav">
-              {primaryRoutes.map(r => {
-                const Icon = r.icon;
-                return (
-                  <NavLink key={r.path} to={r.path} className="nav-item" title={r.label}>
-                    <Icon size={18} /> <span>{r.label}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
-          </div>
-        )}
-
-        <div className="sidebar-section">
-          <h4 className="sidebar-label">KNOWLEDGE</h4>
-          <nav className="sidebar-nav">
-            {knowledgeRoutes.map(r => {
-              const Icon = r.icon;
-              return (
-                <NavLink key={r.path} to={r.path} className="nav-item" title={r.label}>
-                  <Icon size={18} /> <span>{r.label}</span>
-                </NavLink>
-              );
-            })}
-          </nav>
+        {/* Persistent AI Status Badge */}
+        <div className="sidebar-section" style={{ marginTop: 'auto', marginBottom: '0.6rem', padding: '0 4px' }}>
+          <PermanentAiStatusBadge variant="sidebar" />
         </div>
 
         <div className="sidebar-section bottom" style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>
           <nav className="sidebar-nav">
-            <button className="nav-item" onClick={() => useOrionStore.getState().setSearchOpen(true)} style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left' }} title="Search (Cmd+K)">
+            <button className="nav-item" onClick={() => useOrionStore.getState().setSearchOpen(true)} style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }} title="Search (Cmd+K)">
               <Search size={18} /> <span>Search</span>
               <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)', border: '1px solid var(--border-color)', padding: '2px 4px', borderRadius: '4px' }}>⌘K</span>
             </button>
@@ -140,7 +157,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-
-
-
-

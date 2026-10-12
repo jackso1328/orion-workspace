@@ -1,20 +1,39 @@
 """
 ORION - FastAPI Backend Bridge
 This API connects the Tauri Desktop UI to the Python AI architecture.
-It acts as the frontend-facing Orchestrator.
+It acts as the frontend-facing Orchestrator and Agentic Gateway.
 """
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
+import os
+import sys
+import shutil
+import subprocess
+import asyncio
+import logging
+from pathlib import Path
+from typing import Optional, List, Dict, Any
+
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import shutil
-import os
-import subprocess
-import sys
-from pathlib import Path
 
-# --- ORION Modules ---
-from backend.llm import generate_response
-from backend.documents import ingest_document, search_documents, list_documents, delete_document
+logger = logging.getLogger("orion.backend")
+
+# --- ORION Modules (with flexible import fallback) ---
+try:
+    from backend.llm import generate_response, get_cloud_credentials, get_active_engine_info
+    from backend.model_manager import model_manager
+    from backend.hardware_detector import detect_hardware
+    from backend.documents import ingest_document, search_documents, list_documents, delete_document
+    from backend.agent.react_loop import run_agent_loop
+except ImportError:
+    from llm import generate_response, get_cloud_credentials, get_active_engine_info
+    from model_manager import model_manager
+    from hardware_detector import detect_hardware
+    from documents import ingest_document, search_documents, list_documents, delete_document
+    try:
+        from agent.react_loop import run_agent_loop
+    except ImportError:
+        from react_loop import run_agent_loop
 
 app = FastAPI(title="ORION AI Backend")
 
@@ -30,6 +49,18 @@ app.add_middleware(
 PYTHON_EXE = os.path.join(sys.prefix, "Scripts", "python.exe")
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+def get_full_ai_status() -> dict:
+    """Build the comprehensive AI status payload for REST and WebSocket."""
+    base_status = model_manager.get_status()
+    cloud_prov, _ = get_cloud_credentials()
+    if cloud_prov:
+        base_status["engine"] = "cloud"
+        base_status["cloud_provider"] = cloud_prov
+        base_status["cloudProvider"] = cloud_prov
+    return base_status
+
+
 # ============================================================
 # 1. CORE AI ENDPOINTS (Ears, Brain, Mouth)
 # ============================================================
@@ -42,10 +73,11 @@ def trigger_listen():
         capture_output=True, text=True, cwd=BACKEND_DIR
     )
     transcript = ""
-    for line in result.stdout.strip().split('\n'):
+    for line in result.stdout.strip().split("\n"):
         if line.startswith("TRANSCRIPT:"):
             transcript = line.replace("TRANSCRIPT:", "").strip()
     return {"transcript": transcript}
+
 
 @app.post("/api/transcribe")
 async def trigger_transcribe(file: UploadFile = File(...)):
@@ -62,47 +94,62 @@ async def trigger_transcribe(file: UploadFile = File(...)):
         capture_output=True, text=True, cwd=BACKEND_DIR
     )
     transcript = ""
-    for line in result.stdout.strip().split('\n'):
+    for line in result.stdout.strip().split("\n"):
         if line.startswith("TRANSCRIPT:"):
             transcript = line.replace("TRANSCRIPT:", "").strip()
-            
+
     # Clean up temp file
     if os.path.exists(temp_file):
         os.remove(temp_file)
-        
+
     return {"transcript": transcript}
+
 
 class ChatRequest(BaseModel):
     message: str
+    api_key: Optional[str] = None
+    provider: Optional[str] = None
+    state_snapshot: Optional[Dict[str, Any]] = None
+    conversation_history: Optional[List[Dict[str, str]]] = None
+
 
 @app.post("/api/think")
 async def trigger_think(request: ChatRequest):
     """
-    RAG Pipeline:
-    1. Search documents for context
-    2. Inject into prompt
-    3. Ask LLM
+    Agentic ReAct Pipeline:
+    Executes multi-step reasoning, runs data tools (live web search, document search)
+    and stages UI actions (addTask, createPlan, addFlashcard, addQuiz).
     """
-    user_msg = request.message
-    
-    # 1. Retrieve context from Document Vault
-    context_chunks = search_documents(user_msg, top_k=2)
-    context_str = "\n\n".join(context_chunks)
-    
-    # 2. Build the RAG Prompt
-    if context_str:
-        augmented_prompt = f"Context from the user's documents:\n{context_str}\n\nUser Question: {user_msg}"
-    else:
-        augmented_prompt = user_msg
+    result = await run_agent_loop(
+        user_message=request.message,
+        conversation_history=request.conversation_history,
+        state_snapshot=request.state_snapshot,
+        api_key=request.api_key,
+        provider=request.provider,
+    )
 
-    # 3. Generate response (LLM unloads automatically via keep_alive=0 logic if added to llm.py)
-    # Wait, llm.py currently doesn't have keep_alive=0. We'll rely on the standard API for now.
-    reply = await generate_response(augmented_prompt)
-    
-    return {"reply": reply}
+    # Legacy mapping for backwards compatibility with earlier UI
+    task_action = None
+    plan_proposal = None
+    for act in result.actions:
+        if act.get("action") == "addTask":
+            task_action = act.get("payload")
+        elif act.get("action") == "addPlan":
+            plan_proposal = act.get("payload", {}).get("items")
+
+    return {
+        "reply": result.reply,
+        "actions": result.actions,
+        "steps": result.steps,
+        "proposal": plan_proposal,
+        "task_action": task_action,
+        "task": task_action,
+    }
+
 
 class SpeakRequest(BaseModel):
     text: str
+
 
 @app.post("/api/speak")
 def trigger_speak(request: SpeakRequest):
@@ -113,39 +160,176 @@ def trigger_speak(request: SpeakRequest):
     )
     return {"status": "speaking"}
 
+
 # ============================================================
-# 2. THE LIBRARY (Document Vault Endpoints)
+# 2. AI RUNTIME & MODEL DOWNLOAD MANAGER ENDPOINTS
+# ============================================================
+
+@app.get("/api/ai/status")
+def get_ai_status():
+    """Returns runtime engine status, model presence, download state, and hardware profile."""
+    return get_full_ai_status()
+
+
+@app.post("/api/ai/download/start")
+def start_ai_download():
+    """Starts resumable background download of the local GGUF model."""
+    return model_manager.start_download()
+
+
+@app.post("/api/ai/download/pause")
+def pause_ai_download():
+    """Pauses download while preserving partial .part bytes on disk."""
+    return model_manager.pause_download()
+
+
+@app.post("/api/ai/download/resume")
+def resume_ai_download():
+    """Resumes download from saved byte offset."""
+    return model_manager.resume_download()
+
+
+@app.post("/api/ai/download/cancel")
+def cancel_ai_download():
+    """Cancels download and purges partial .part file."""
+    return model_manager.cancel_download()
+
+
+@app.post("/api/ai/model/delete")
+def delete_ai_model():
+    """Deletes local GGUF model and frees disk space."""
+    return model_manager.delete_model()
+
+
+@app.websocket("/ws/ai-status")
+async def websocket_ai_status(websocket: WebSocket):
+    """
+    Real-time WebSocket streaming download progress (10Hz) and engine state changes.
+    Emits both { type: "DOWNLOAD_PROGRESS", progress: ... } and direct status fields
+    for full compatibility with ModelDownloadModal and useOrionStore.
+    """
+    await websocket.accept()
+    try:
+        while True:
+            status_payload = get_full_ai_status()
+            download_state = status_payload.get("download_state", {})
+            payload = {
+                "type": "DOWNLOAD_PROGRESS",
+                "progress": download_state,
+                **status_payload,
+            }
+            await websocket.send_json(payload)
+            is_downloading = model_manager.progress.status == "downloading"
+            await asyncio.sleep(0.1 if is_downloading else 1.0)
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.debug("WebSocket disconnected: %s", e)
+
+
+@app.websocket("/ws/agent")
+async def websocket_agent_channel(websocket: WebSocket):
+    """
+    Bidirectional Agentic WebSocket channel.
+    Connects CommandCenter to the ReAct agent loop for streaming thoughts,
+    live tool status, STORE_ACTION events, and final responses.
+    """
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg_type = data.get("type", "USER_INPUT")
+            if msg_type != "USER_INPUT":
+                continue
+
+            user_message = data.get("message", "")
+            state_snapshot = data.get("state_snapshot")
+            conversation_history = data.get("conversation_history")
+            request_id = data.get("requestId", "req_" + str(int(asyncio.get_event_loop().time() * 1000)))
+
+            async def send_agent_event(event_type: str, payload: Any):
+                try:
+                    await websocket.send_json({
+                        "type": "AGENT_EVENT",
+                        "eventType": event_type,
+                        "data": payload,
+                        "requestId": request_id
+                    })
+                except Exception as send_err:
+                    logger.debug("Failed sending agent WS event: %s", send_err)
+
+            # Run ReAct loop with real-time event streaming
+            result = await run_agent_loop(
+                user_message=user_message,
+                conversation_history=conversation_history,
+                state_snapshot=state_snapshot,
+                on_event=send_agent_event
+            )
+
+            # Emit all queued STORE_ACTION events
+            for act in result.actions:
+                await websocket.send_json({
+                    "type": "STORE_ACTION",
+                    "action": act.get("action"),
+                    "payload": act.get("payload"),
+                    "requestId": request_id
+                })
+
+            # Emit final agent response
+            await websocket.send_json({
+                "type": "AGENT_RESPONSE",
+                "reply": result.reply,
+                "actions": result.actions,
+                "steps": result.steps,
+                "requestId": request_id
+            })
+
+    except WebSocketDisconnect:
+        logger.debug("Agent WebSocket client disconnected")
+    except Exception as e:
+        logger.error("Error in agent WebSocket: %s", e)
+
+
+# ============================================================
+# 3. THE LIBRARY (Document Vault Endpoints)
 # ============================================================
 
 UPLOAD_DIR = Path("C:/Users/proud/ORION/data/uploads")
 
+
 @app.post("/api/documents/upload")
 async def upload_document(file: UploadFile = File(...)):
-    """Accepts a file from the UI, saves it, and runs the RAG ingestion pipeline."""
+    """Accepts a file from the UI, saves it, and runs the FastEmbed RAG ingestion pipeline."""
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     file_path = UPLOAD_DIR / file.filename
-    
+
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
-    # Run the ingestion pipeline (extract, chunk, embed)
+
+    # Run the ingestion pipeline (extract, chunk, embed via FastEmbed)
     doc_metadata = ingest_document(str(file_path))
-    
+
     if "error" in doc_metadata:
         raise HTTPException(status_code=500, detail=doc_metadata["error"])
-        
+
     return {"message": "Document ingested successfully", "document": doc_metadata}
+
 
 @app.get("/api/documents")
 def get_documents():
     """Returns the list of all uploaded documents for the UI Vault."""
     return {"documents": list_documents()}
 
+
 @app.delete("/api/documents/{doc_id}")
 def remove_document(doc_id: str):
-    """Deletes a document from the index."""
+    """Deletes a document from the index and Qdrant."""
     success = delete_document(doc_id)
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"message": "Document deleted"}
 
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)

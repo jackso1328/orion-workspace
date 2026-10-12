@@ -1,10 +1,24 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { invoke } from '@tauri-apps/api/core';
 import { OrionModeId } from '../config/modes';
 import { Plan, PlanItem, PlanStatus } from '../domain/planning/types';
 import { validatePlanItems } from '../domain/planning/validation';
 import { InboxItem } from '../domain/inbox/types';
+
+export type AiEngineStatus = 'checking' | 'cloud_ready' | 'local_ready' | 'needs_download' | 'downloading' | 'paused' | 'disabled';
+
+export interface AiDownloadProgress {
+  status: 'idle' | 'downloading' | 'paused' | 'completed' | 'error';
+  modelName: string;
+  totalBytes: number;
+  downloadedBytes: number;
+  percent: number;
+  speedMbps: number;
+  etaSeconds: number;
+  error?: string;
+}
 
 export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Overdue';
 export type TaskPriority = 'Critical' | 'High' | 'Medium' | 'Low';
@@ -180,6 +194,10 @@ export interface OrionState {
   addInboxItem: (content: string) => void;
   removeInboxItem: (id: string) => void;
   markInboxItemProcessed: (id: string) => void;
+  
+  sidebarCollapsedGroups: string[];
+  toggleSidebarGroup: (groupId: string) => void;
+  
   isSearchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
   activeMode: OrionModeId;
@@ -239,6 +257,7 @@ export interface OrionState {
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   toggleTaskCompletion: (id: string) => void;
+  updateScrpad: (content: string) => void;
   updateScratchpad: (content: string) => void;
   updatePomodoroSettings: (settings: Partial<OrionState['pomodoroSettings']>) => void;
   addDocument: (doc: Omit<Document, 'uploadedAt'> & { id?: string }) => void;
@@ -257,6 +276,25 @@ export interface OrionState {
   addPlan: (items: Omit<PlanItem, 'id'>[]) => void;
   updatePlanStatus: (id: string, status: PlanStatus) => void;
   removePlan: (id: string) => void;
+
+  // AI State & Controls
+  aiEngineStatus: AiEngineStatus;
+  isAiDownloadModalOpen: boolean;
+  aiDownloadDeclined: boolean;
+  aiDownloadProgress: AiDownloadProgress;
+  aiModelSizeFormatted: string;
+  aiProvider: 'cloud' | 'local' | 'none';
+
+  setAiEngineStatus: (status: AiEngineStatus) => void;
+  setIsAiDownloadModalOpen: (open: boolean) => void;
+  setAiDownloadDeclined: (declined: boolean) => void;
+  updateAiDownloadProgress: (progress: Partial<AiDownloadProgress>) => void;
+  startAiModelDownload: () => Promise<void>;
+  pauseAiModelDownload: () => Promise<void>;
+  resumeAiModelDownload: () => Promise<void>;
+  cancelAiModelDownload: () => Promise<void>;
+  deleteLocalModel: () => Promise<void>;
+  checkAiSystemStatus: () => Promise<void>;
 }
 
 const ACCENT_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#14b8a6", "#f59e0b", "#f43f5e"];
@@ -268,6 +306,17 @@ export const useOrionStore = create<OrionState>()(
       setSearchOpen: (open) => set({ isSearchOpen: open }),
       activeMode: 'study',
       setActiveMode: (mode) => set({ activeMode: mode }),
+      
+      sidebarCollapsedGroups: [],
+      toggleSidebarGroup: (groupId) => set((state) => {
+        const isCollapsed = state.sidebarCollapsedGroups.includes(groupId);
+        if (isCollapsed) {
+          return { sidebarCollapsedGroups: state.sidebarCollapsedGroups.filter(id => id !== groupId) };
+        } else {
+          return { sidebarCollapsedGroups: [...state.sidebarCollapsedGroups, groupId] };
+        }
+      }),
+      
       inbox: [],
       addInboxItem: (content) => set((state) => ({ inbox: [{ id: uuidv4(), content, createdAt: new Date().toISOString() }, ...state.inbox] })),
       removeInboxItem: (id) => set((state) => ({ inbox: state.inbox.filter((item) => item.id !== id) })),
@@ -441,9 +490,10 @@ export const useOrionStore = create<OrionState>()(
         })
       })),
 
+      updateScrpad: (content) => set({ scratchpad: content }),
       updateScratchpad: (content) => set({ scratchpad: content }),
 
-            addCourse: (courseData) => set((state) => ({
+      addCourse: (courseData) => set((state) => ({
         courses: [
           {
             ...courseData,
@@ -457,7 +507,8 @@ export const useOrionStore = create<OrionState>()(
       updateCourse: (id, updates) => set((state) => ({
         courses: state.courses.map(c => c.id === id ? { ...c, ...updates } : c)
       })),
-            addAssignment: (assignmentData) => set((state) => ({
+
+      addAssignment: (assignmentData) => set((state) => ({
         assignments: [
           {
             ...assignmentData,
@@ -470,7 +521,8 @@ export const useOrionStore = create<OrionState>()(
       updateAssignment: (id, updates) => set((state) => ({
         assignments: state.assignments.map(a => a.id === id ? { ...a, ...updates } : a)
       })),
-            addFlashcardDeck: (deckData) => set((state) => ({
+
+      addFlashcardDeck: (deckData) => set((state) => ({
         flashcardDecks: [{ ...deckData, id: uuidv4() }, ...state.flashcardDecks]
       })),
 
@@ -599,6 +651,228 @@ export const useOrionStore = create<OrionState>()(
       removePlan: (id) => set((state) => ({
         plans: state.plans.filter(p => p.id !== id)
       })),
+
+      // AI State Initialization
+      aiEngineStatus: 'checking',
+      isAiDownloadModalOpen: false,
+      aiDownloadDeclined: false,
+      aiModelSizeFormatted: '2.1 GB',
+      aiProvider: 'none',
+      aiDownloadProgress: {
+        status: 'idle',
+        modelName: 'Qwen 2.5 3B Instruct (Q4_K_M)',
+        totalBytes: 2147483648, // 2.0 GiB
+        downloadedBytes: 0,
+        percent: 0,
+        speedMbps: 0,
+        etaSeconds: 0,
+      },
+
+      setAiEngineStatus: (status) => set({ aiEngineStatus: status }),
+      setIsAiDownloadModalOpen: (open) => set({ isAiDownloadModalOpen: open }),
+      setAiDownloadDeclined: (declined) => set({ 
+        aiDownloadDeclined: declined,
+        isAiDownloadModalOpen: false,
+        aiEngineStatus: declined ? 'disabled' : 'needs_download'
+      }),
+      updateAiDownloadProgress: (prog) => set((s) => {
+        const nextProgress = { ...s.aiDownloadProgress, ...prog };
+        let nextEngineStatus = s.aiEngineStatus;
+        let nextProvider = s.aiProvider;
+
+        if (prog.status === 'completed') {
+          nextEngineStatus = 'local_ready';
+          nextProvider = 'local';
+        } else if (prog.status === 'error') {
+          nextEngineStatus = 'disabled';
+        }
+
+        return {
+          aiDownloadProgress: nextProgress,
+          aiEngineStatus: nextEngineStatus,
+          aiProvider: nextProvider
+        };
+      }),
+
+      startAiModelDownload: async () => {
+        set((s) => ({
+          aiEngineStatus: 'downloading',
+          aiDownloadProgress: {
+            ...s.aiDownloadProgress,
+            status: 'downloading',
+            percent: s.aiDownloadProgress.percent > 0 ? s.aiDownloadProgress.percent : 1,
+            error: undefined
+          }
+        }));
+
+        try {
+          const res = await fetch('http://localhost:8000/api/ai/download/start', { method: 'POST' });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Backend failed to start download');
+          }
+        } catch (err: any) {
+          console.warn('Backend download endpoint not reachable:', err);
+          set((s) => ({
+            aiDownloadProgress: {
+              ...s.aiDownloadProgress,
+              status: 'error',
+              error: 'Cannot connect to ORION backend (http://localhost:8000). Make sure the backend server is running.'
+            }
+          }));
+        }
+      },
+
+      pauseAiModelDownload: async () => {
+        set((s) => ({
+          aiEngineStatus: 'paused',
+          aiDownloadProgress: {
+            ...s.aiDownloadProgress,
+            status: 'paused',
+            speedMbps: 0
+          }
+        }));
+
+        try {
+          await fetch('http://localhost:8000/api/ai/download/pause', { method: 'POST' });
+        } catch (err) {
+          console.warn('Backend pause endpoint error:', err);
+        }
+      },
+
+      resumeAiModelDownload: async () => {
+        set((s) => ({
+          aiEngineStatus: 'downloading',
+          aiDownloadProgress: {
+            ...s.aiDownloadProgress,
+            status: 'downloading'
+          }
+        }));
+
+        try {
+          await fetch('http://localhost:8000/api/ai/download/resume', { method: 'POST' });
+        } catch (err) {
+          console.warn('Backend resume endpoint error:', err);
+        }
+      },
+
+      cancelAiModelDownload: async () => {
+        set((s) => ({
+          aiEngineStatus: s.aiDownloadDeclined ? 'disabled' : 'needs_download',
+          isAiDownloadModalOpen: false,
+          aiDownloadProgress: {
+            ...s.aiDownloadProgress,
+            status: 'idle',
+            downloadedBytes: 0,
+            percent: 0,
+            speedMbps: 0
+          }
+        }));
+
+        try {
+          await fetch('http://localhost:8000/api/ai/download/cancel', { method: 'POST' });
+        } catch (err) {
+          console.warn('Backend cancel endpoint error:', err);
+        }
+      },
+
+      deleteLocalModel: async () => {
+        try {
+          await fetch('http://localhost:8000/api/ai/model/delete', { method: 'POST' });
+        } catch (err) {
+          console.warn('Backend model delete error:', err);
+        }
+
+        set({
+          aiDownloadProgress: {
+            status: 'idle',
+            modelName: 'Qwen 2.5 3B Instruct (Q4_K_M)',
+            totalBytes: 2147483648,
+            downloadedBytes: 0,
+            percent: 0,
+            speedMbps: 0,
+            etaSeconds: 0,
+          }
+        });
+
+        // Re-check system status (transitions to cloud_ready or disabled/needs_download)
+        await useOrionStore.getState().checkAiSystemStatus();
+      },
+
+      checkAiSystemStatus: async () => {
+        // Step 1: Check native OS Keychain for configured API credentials
+        let hasCloudKey = false;
+        const providers = ['openai', 'anthropic', 'openrouter'];
+        for (const prov of providers) {
+          try {
+            const configured = await invoke<boolean>('check_api_credential', { provider: prov });
+            if (configured) {
+              hasCloudKey = true;
+              break;
+            }
+          } catch {
+            // Not running in Tauri or keychain unavailable
+          }
+        }
+
+        if (hasCloudKey) {
+          set({
+            aiEngineStatus: 'cloud_ready',
+            aiProvider: 'cloud',
+            isAiDownloadModalOpen: false
+          });
+          return;
+        }
+
+        // Step 2: Check backend for local model presence
+        try {
+          const res = await fetch('http://localhost:8000/api/ai/status');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.model_exists) {
+              set({
+                aiEngineStatus: 'local_ready',
+                aiProvider: 'local',
+                aiModelSizeFormatted: data.model_size_formatted || '2.1 GB',
+                isAiDownloadModalOpen: false
+              });
+              return;
+            }
+            if (data.download_state && data.download_state.status === 'downloading') {
+              set({
+                aiEngineStatus: 'downloading',
+                aiDownloadProgress: data.download_state
+              });
+              return;
+            }
+            if (data.download_state && data.download_state.status === 'paused') {
+              set({
+                aiEngineStatus: 'paused',
+                aiDownloadProgress: data.download_state
+              });
+              return;
+            }
+          }
+        } catch {
+          // Backend offline or starting up
+        }
+
+        // Step 3: No API key & No local model
+        set((state) => {
+          if (state.aiDownloadDeclined) {
+            return {
+              aiEngineStatus: 'disabled',
+              aiProvider: 'none',
+              isAiDownloadModalOpen: false
+            };
+          }
+          return {
+            aiEngineStatus: 'needs_download',
+            aiProvider: 'none',
+            isAiDownloadModalOpen: true
+          };
+        });
+      },
 
     }),
     {

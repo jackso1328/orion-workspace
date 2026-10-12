@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Page, WhiteboardObject } from './types';
+import { ConfirmModal } from '../ConfirmModal';
+
 
 interface WhiteboardPagesProps {
   pages: Page[];
@@ -56,6 +58,7 @@ export function WhiteboardPages({
   const [editName, setEditName] = useState('');
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [hoveredPageId, setHoveredPageId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   const handleStartRename = (id: string, name: string) => {
     setEditingId(id);
@@ -124,9 +127,10 @@ export function WhiteboardPages({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (Object.keys(page.objects).length > 0) {
-                    if (window.confirm('Clear all objects and delete this page?')) {
-                      onDeletePage(page.id);
-                    }
+                    setConfirmDialog({
+                      message: 'Clear all objects and delete this page?',
+                      onConfirm: () => onDeletePage(page.id)
+                    });
                   } else {
                     onDeletePage(page.id);
                   }
@@ -184,6 +188,12 @@ export function WhiteboardPages({
         +
       </button>
 
+      <ConfirmModal
+        isOpen={!!confirmDialog}
+        message={confirmDialog?.message || ''}
+        onConfirm={() => confirmDialog?.onConfirm()}
+        onCancel={() => setConfirmDialog(null)}
+      />
       {contextMenu && (
         <div
           style={{
@@ -218,9 +228,10 @@ export function WhiteboardPages({
           <ContextMenuItem label="Delete" danger onClick={() => {
             const p = pages.find(p => p.id === contextMenu.id);
             if (p && Object.keys(p.objects).length > 0) {
-                if (window.confirm('Clear all objects and delete this page?')) {
-                    onDeletePage(contextMenu.id);
-                }
+                setConfirmDialog({
+                  message: 'Clear all objects and delete this page?',
+                  onConfirm: () => onDeletePage(contextMenu.id)
+                });
             } else {
                 onDeletePage(contextMenu.id);
             }

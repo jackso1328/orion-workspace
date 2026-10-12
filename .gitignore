@@ -5,3 +5,7 @@ data/
 temp_audio.wav
 3.jpg
 .DS_Store
+.env
+*.gguf
+models/
+*.log

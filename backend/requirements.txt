@@ -2,3 +2,8 @@ fastapi
 uvicorn
 openai
 python-dotenv
+requests
+fastembed
+qdrant-client
+keyring
+duckduckgo-search

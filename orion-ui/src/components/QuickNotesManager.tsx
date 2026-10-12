@@ -5,6 +5,8 @@ import { useQuickNotesStore, QuickNote } from '../store/useQuickNotesStore';
 import { useOrionStore } from '../store/useOrionStore';
 import { ChevronDown, ChevronRight, CheckSquare, Square, Trash2, FolderPlus, X, Search, MapPin } from 'lucide-react';
 import QuickNoteEditor from './QuickNoteEditor';
+import { ConfirmModal } from './ConfirmModal';
+
 
 // Matches PAPER_COLORS in QuickNoteEditor
 const PAPER_COLORS: Record<string, string> = {
@@ -47,6 +49,7 @@ export default function QuickNotesManager() {
   const [newGroupTitle, setNewGroupTitle] = useState('');
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -137,20 +140,26 @@ export default function QuickNotesManager() {
   };
 
   const handleBulkDelete = () => {
-    if (window.confirm(`Delete ${selectedNotes.size} selected notes?`)) {
-      selectedNotes.forEach(id => deleteNote(id));
-      setSelectedNotes(new Set());
-    }
+    setConfirmDialog({
+      message: `Delete ${selectedNotes.size} selected notes?`,
+      onConfirm: () => {
+        selectedNotes.forEach(id => deleteNote(id));
+        setSelectedNotes(new Set());
+      }
+    });
   };
 
   const handleDeleteDate = (dateNotes: QuickNote[], label: string) => {
-    if (window.confirm(`Delete all ${dateNotes.length} notes from ${label}?`)) {
-      dateNotes.forEach(n => deleteNote(n.id));
-      // Remove from selection
-      const next = new Set(selectedNotes);
-      dateNotes.forEach(n => next.delete(n.id));
-      setSelectedNotes(next);
-    }
+    setConfirmDialog({
+      message: `Delete all ${dateNotes.length} notes from ${label}?`,
+      onConfirm: () => {
+        dateNotes.forEach(n => deleteNote(n.id));
+        // Remove from selection
+        const next = new Set(selectedNotes);
+        dateNotes.forEach(n => next.delete(n.id));
+        setSelectedNotes(next);
+      }
+    });
   };
 
   const handleCreateGroup = () => {
@@ -409,6 +418,12 @@ export default function QuickNotesManager() {
           }}
         />
       )}
+      <ConfirmModal
+        isOpen={!!confirmDialog}
+        message={confirmDialog?.message || ''}
+        onConfirm={() => confirmDialog?.onConfirm()}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

@@ -46,6 +46,50 @@ export function WhiteboardCanvas({
   const [editingText, setEditingText] = useState<{ id: string, text: string } | null>(null);
 
   useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      if (editingText) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const dataUrl = ev.target?.result as string;
+              const w = 400;
+              const h = 300;
+              const cx = window.innerWidth / 2;
+              const cy = window.innerHeight / 2;
+              const x = (cx - camera.x) / camera.z - w/2;
+              const y = (cy - camera.y) / camera.z - h/2;
+
+              const id = crypto.randomUUID();
+              addObject({
+                id,
+                type: 'image',
+                x, y, width: w, height: h,
+                rotation: 0,
+                zIndex: Object.keys(objects).length,
+                locked: false,
+                dataUrl,
+                crop: { x: 0, y: 0, width: 1, height: 1 }
+              } as any);
+            };
+            reader.readAsDataURL(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [camera, objects, addObject, editingText]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (editingText) return;
       if (e.key === 'Backspace' || e.key === 'Delete') {
@@ -66,6 +110,7 @@ export function WhiteboardCanvas({
       if (e.key === 't') setTool('text');
       if (e.key === 'r') setTool('rectangle');
       if (e.key === 'o') setTool('ellipse');
+      if (e.key === 'a') setTool('arrow');
       if (e.key === 'l') setTool('line');
       if (e.key === 's') setTool('sticky');
     };
@@ -157,12 +202,33 @@ export function WhiteboardCanvas({
         const obj = objects[selId];
         if (obj && obj.type !== 'freehand' && !obj.locked) {
           const handleSize = 8 / camera.z;
-          const handles = {
-            nw: { x: obj.x, y: obj.y },
-            ne: { x: obj.x + obj.width, y: obj.y },
-            sw: { x: obj.x, y: obj.y + obj.height },
-            se: { x: obj.x + obj.width, y: obj.y + obj.height },
-          };
+          let handles: Record<string, { x: number, y: number }> = {};
+          if (['line', 'arrow'].includes(obj.type)) {
+            handles = {
+              se: { x: obj.x + obj.width, y: obj.y + obj.height },
+              nw: { x: obj.x, y: obj.y },
+            };
+          } else if (obj.type === 'image') {
+            handles = {
+              rot: { x: obj.x + obj.width / 2, y: obj.y - 30 },
+              nw: { x: obj.x, y: obj.y },
+              ne: { x: obj.x + obj.width, y: obj.y },
+              sw: { x: obj.x, y: obj.y + obj.height },
+              se: { x: obj.x + obj.width, y: obj.y + obj.height },
+              n: { x: obj.x + obj.width / 2, y: obj.y },
+              s: { x: obj.x + obj.width / 2, y: obj.y + obj.height },
+              e: { x: obj.x + obj.width, y: obj.y + obj.height / 2 },
+              w: { x: obj.x, y: obj.y + obj.height / 2 },
+            };
+          } else {
+            // rectangle, ellipse, diamond, triangle, sticky, text, video
+            handles = {
+              se: { x: obj.x + obj.width, y: obj.y + obj.height },
+              ne: { x: obj.x + obj.width, y: obj.y },
+              sw: { x: obj.x, y: obj.y + obj.height },
+              nw: { x: obj.x, y: obj.y },
+            };
+          }
           for (const [pos, hpt] of Object.entries(handles)) {
             if (pt.x >= hpt.x - handleSize && pt.x <= hpt.x + handleSize &&
                 pt.y >= hpt.y - handleSize && pt.y <= hpt.y + handleSize) {
@@ -234,7 +300,7 @@ export function WhiteboardCanvas({
       return;
     }
 
-    if (['rectangle', 'ellipse', 'diamond', 'line'].includes(tool)) {
+    if (['rectangle', 'ellipse', 'diamond', 'triangle', 'line', 'arrow'].includes(tool)) {
       setSelection(new Set([id]));
       addObject({
         id, type: tool, x: pt.x, y: pt.y, width: 1, height: 1,
@@ -279,7 +345,7 @@ export function WhiteboardCanvas({
       return;
     }
 
-    if (draggingObj && tool === 'select' || (draggingObj?.handle && ['rectangle', 'ellipse', 'diamond', 'line'].includes(tool))) {
+    if (draggingObj && tool === 'select' || (draggingObj?.handle && ['rectangle', 'ellipse', 'diamond', 'triangle', 'line', 'arrow'].includes(tool))) {
       const dx = (x - draggingObj.startX) / camera.z;
       const dy = (y - draggingObj.startY) / camera.z;
       
@@ -290,7 +356,7 @@ export function WhiteboardCanvas({
         let newW = draggingObj.objStartW || 0;
         let newH = draggingObj.objStartH || 0;
 
-        const isLine = ['line', 'arrow'].includes(objects[draggingObj.id]?.type);
+        const isLine = ['line', 'arrow'].includes(tool) || ['line', 'arrow'].includes(objects[draggingObj.id]?.type);
         if (draggingObj.handle.includes('e')) newW = isLine ? newW + dx : Math.max(1, newW + dx);
         if (draggingObj.handle.includes('w')) {
           const w = isLine ? newW - dx : Math.max(1, newW - dx);
@@ -326,12 +392,12 @@ export function WhiteboardCanvas({
     if (selectionBox) setSelectionBox(null);
     if (draggingObj) {
       if (draggingObj.id !== 'pan') commitHistoryTransaction();
-      if (['rectangle', 'ellipse', 'diamond', 'line', 'arrow'].includes(tool) && draggingObj.handle) {
+      if (['rectangle', 'ellipse', 'diamond', 'triangle', 'line', 'arrow'].includes(tool) && draggingObj.handle) {
          const obj = objects[draggingObj.id];
-         if (obj && ['line', 'arrow'].includes(obj.type) && Math.abs(obj.width) < 5 && Math.abs(obj.height) < 5) {
+         // Only automatically delete if it's completely invisible (e.g. they clicked and dragged 0 pixels)
+         if (obj && Math.abs(obj.width) < 1 && Math.abs(obj.height) < 1) {
            deleteObjects([draggingObj.id]);
          }
-         setTool('select');
       }
       setDraggingObj(null);
     }
@@ -371,16 +437,27 @@ export function WhiteboardCanvas({
     }
   };
 
+  const customCursorSelect = `url('data:image/svg+xml;utf8,<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 3.5L20 14L13.5 15.5L10 22L6.5 3.5Z" fill="%231a1625" stroke="white" stroke-width="2.5" stroke-linejoin="round"/></svg>') 6.5 3.5, default`;
+  const customCursorDraw = `url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="2.5" fill="%238b5cf6"/><circle cx="12" cy="12" r="10" stroke="%238b5cf6" stroke-width="1" opacity="0.3"/></svg>') 12 12, crosshair`;
+
+  const getCursor = () => {
+    if (isPanning || tool === 'pan') return 'grab';
+    if (tool === 'text') return 'text';
+    if (tool === 'select') return customCursorSelect;
+    return customCursorDraw;
+  };
+
   return (
     <div ref={containerRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} onWheel={handleWheel}
       style={{ width: '100%', height: '100%', background: '#f8f9fa', overflow: 'hidden', touchAction: 'none',
-        cursor: isPanning || tool === 'pan' ? 'grab' : tool === 'text' ? 'text' : tool === 'eraser' ? 'crosshair' : tool !== 'select' ? 'crosshair' : 'default', position: 'relative' }}>
+        cursor: getCursor(), position: 'relative' }}>
       <svg style={{ width: '100%', height: '100%', transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.z})`, transformOrigin: '0 0' }}>
         {Object.values(objects).map(obj => (
           <g key={obj.id} transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation})`} onDoubleClick={() => { if (!obj.locked && (obj.type === 'text' || obj.type === 'sticky')) setEditingText({ id: obj.id, text: (obj as TextObject).text }); }}>
             {obj.type === 'rectangle' && <rect width={Math.max(1, obj.width)} height={Math.max(1, obj.height)} rx={8} fill={(obj as ShapeObject).fillColor || 'none'} stroke={(obj as ShapeObject).strokeColor} strokeWidth={(obj as ShapeObject).strokeWidth} />}
             {obj.type === 'ellipse' && <ellipse cx={obj.width/2} cy={obj.height/2} rx={Math.max(1, obj.width/2)} ry={Math.max(1, obj.height/2)} fill={(obj as ShapeObject).fillColor || 'none'} stroke={(obj as ShapeObject).strokeColor} strokeWidth={(obj as ShapeObject).strokeWidth} />}
-            {obj.type === 'diamond' && <polygon points={`${obj.width/2},0 ${obj.width},${obj.height/2} ${obj.width/2},${obj.height} 0,${obj.height/2}`} fill={(obj as ShapeObject).fillColor || 'none'} stroke={(obj as ShapeObject).strokeColor} strokeWidth={(obj as ShapeObject).strokeWidth} />}
+                        {obj.type === 'diamond' && <polygon points={`${obj.width/2},0 ${obj.width},${obj.height/2} ${obj.width/2},${obj.height} 0,${obj.height/2}`} fill={(obj as ShapeObject).fillColor || 'none'} stroke={(obj as ShapeObject).strokeColor} strokeWidth={(obj as ShapeObject).strokeWidth} />}
+            {obj.type === 'triangle' && <polygon points={`${obj.width/2},0 ${obj.width},${obj.height} 0,${obj.height}`} fill={(obj as ShapeObject).fillColor || 'none'} stroke={(obj as ShapeObject).strokeColor} strokeWidth={(obj as ShapeObject).strokeWidth} />}
             {obj.type === 'line' && <line x1={0} y1={0} x2={obj.width} y2={obj.height} stroke={(obj as ArrowObject).strokeColor} strokeWidth={(obj as ArrowObject).strokeWidth} />}
             {obj.type === 'arrow' && (
               <g>
@@ -397,12 +474,22 @@ export function WhiteboardCanvas({
             )}
             {obj.type === 'sticky' && (
               <g>
+                <g transform={`translate(${Math.max(10, obj.width) / 2 - 24}, -12) scale(2)`}>
+                  <path d="M 5 6 V 17 A 7 7 0 0 0 19 17 V 9" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="butt" fill="none"/>
+                </g>
                 <rect width={Math.max(10, obj.width)} height={Math.max(10, obj.height)} rx={4} fill={getStickyColor((obj as StickyObject).colorVariant).bg} stroke={getStickyColor((obj as StickyObject).colorVariant).border} strokeWidth={1} />
                 <foreignObject x={10} y={10} width={Math.max(1, obj.width - 20)} height={Math.max(1, obj.height - 20)}>
                   <div style={{ width: '100%', height: '100%', fontSize: '18px', fontFamily: 'var(--font-sans)', color: '#1e293b', overflowWrap: 'break-word', overflow: 'hidden' }}>
                     {editingText?.id !== obj.id && (obj as StickyObject).text}
                   </div>
                 </foreignObject>
+                <g transform={`translate(${Math.max(10, obj.width) / 2 - 24}, -12) scale(2)`}>
+                  <path d="M 9 9 V 17 A 3 3 0 0 0 15 17 V 6" stroke="rgba(0,0,0,0.15)" strokeWidth="3.5" strokeLinecap="round" fill="none" transform="translate(1, 1.5)" />
+                  <path d="M 15 6 A 5 5 0 0 0 5 6" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="butt" fill="none"/>
+                  <path d="M 9 9 V 17 A 3 3 0 0 0 15 17 V 6" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+                  <path d="M 15 6 A 5 5 0 0 0 5 6" stroke="#f8fafc" strokeWidth="1" strokeLinecap="butt" fill="none" transform="translate(0.5, 0.5)" opacity="0.8"/>
+                  <path d="M 9 9 V 17 A 3 3 0 0 0 15 17 V 6" stroke="#f8fafc" strokeWidth="1" strokeLinecap="round" fill="none" transform="translate(0.5, 0.5)" opacity="0.8"/>
+                </g>
               </g>
             )}
             {obj.type === 'text' && editingText?.id !== obj.id && (
@@ -414,17 +501,51 @@ export function WhiteboardCanvas({
             
             {selection.has(obj.id) && selection.size === 1 && (
               <g>
-                <rect 
-                   x={Math.min(0, obj.width) - 2} 
-                   y={Math.min(0, obj.height) - 2} 
-                   width={Math.abs(obj.width) + 4} 
-                   height={Math.abs(obj.height) + 4} 
-                   fill="none" stroke="#8b5cf6" strokeWidth={2 / camera.z} strokeDasharray="4 4" pointerEvents="none" />
-                {selection.size === 1 && obj.type !== 'freehand' && !obj.locked && ['nw','ne','sw','se'].map(handle => {
-                   const hx = handle.includes('w') ? Math.min(0, obj.width) - 6/camera.z : Math.max(0, obj.width) - 2/camera.z;
-                   const hy = handle.includes('n') ? Math.min(0, obj.height) - 6/camera.z : Math.max(0, obj.height) - 2/camera.z;
-                   return <rect key={handle} x={hx} y={hy} width={8/camera.z} height={8/camera.z} fill="#fff" stroke="#8b5cf6" strokeWidth={2/camera.z} style={{ cursor: `${handle}-resize` }} />;
-                })}
+                {['line', 'arrow'].includes(obj.type) ? (
+                  <>
+                    {!obj.locked && (
+                      <>
+                        <circle cx={0} cy={0} r={6/camera.z} fill="#fff" stroke="#8b5cf6" strokeWidth={2/camera.z} style={{ cursor: 'crosshair' }} />
+                        <circle cx={obj.width} cy={obj.height} r={6/camera.z} fill="#fff" stroke="#8b5cf6" strokeWidth={2/camera.z} style={{ cursor: 'crosshair' }} />
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <rect 
+                       x={Math.min(0, obj.width) - 2} 
+                       y={Math.min(0, obj.height) - 2} 
+                       width={Math.abs(obj.width) + 4} 
+                       height={Math.abs(obj.height) + 4} 
+                       fill="none" stroke="#8b5cf6" strokeWidth={2 / camera.z} strokeDasharray="4 4" pointerEvents="none" />
+                    {obj.type === 'image' && !obj.locked && (
+                        <>
+                          <line x1={obj.width/2} y1={0} x2={obj.width/2} y2={-30/camera.z} stroke="#8b5cf6" strokeWidth={1/camera.z} />
+                          {['rot', 'n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'].map(handle => {
+                             if (handle === 'rot') {
+                               return <circle key="rot" cx={obj.width/2} cy={-30/camera.z} r={6/camera.z} fill="#fff" stroke="#8b5cf6" strokeWidth={2/camera.z} style={{ cursor: 'grab' }} />;
+                             }
+                             if (handle.length === 1) {
+                               const w = (handle === 'n' || handle === 's') ? 24/camera.z : 8/camera.z;
+                               const h = (handle === 'e' || handle === 'w') ? 24/camera.z : 8/camera.z;
+                               const cx = handle === 'e' ? obj.width : handle === 'w' ? 0 : obj.width/2;
+                               const cy = handle === 's' ? obj.height : handle === 'n' ? 0 : obj.height/2;
+                               const cursor = (handle === 'n' || handle === 's') ? 'ns-resize' : 'ew-resize';
+                               return <rect key={handle} rx={4/camera.z} x={cx - w/2} y={cy - h/2} width={w} height={h} fill="#fff" stroke="#8b5cf6" strokeWidth={2/camera.z} style={{ cursor }} />;
+                             }
+                             const hx = handle.includes('w') ? - 6/camera.z : obj.width - 2/camera.z;
+                             const hy = handle.includes('n') ? - 6/camera.z : obj.height - 2/camera.z;
+                             return <rect key={handle} x={hx} y={hy} width={8/camera.z} height={8/camera.z} fill="#fff" stroke="#8b5cf6" strokeWidth={2/camera.z} style={{ cursor: `${handle}-resize` }} />;
+                          })}
+                        </>
+                    )}
+                    {obj.type !== 'freehand' && obj.type !== 'image' && !obj.locked && ['nw','ne','sw','se'].map(handle => {
+                       const hx = handle.includes('w') ? Math.min(0, obj.width) - 6/camera.z : Math.max(0, obj.width) - 2/camera.z;
+                       const hy = handle.includes('n') ? Math.min(0, obj.height) - 6/camera.z : Math.max(0, obj.height) - 2/camera.z;
+                       return <rect key={handle} x={hx} y={hy} width={8/camera.z} height={8/camera.z} fill="#fff" stroke="#8b5cf6" strokeWidth={2/camera.z} style={{ cursor: `${handle}-resize` }} />;
+                    })}
+                  </>
+                )}
               </g>
             )}
           </g>
