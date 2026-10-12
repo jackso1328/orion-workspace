@@ -20,13 +20,19 @@ logger = logging.getLogger("orion.backend")
 
 # --- ORION Modules (with flexible import fallback) ---
 try:
-    from backend.llm import generate_response, get_cloud_credentials, get_active_engine_info
+    from backend.llm import (
+        generate_response, get_cloud_credentials, get_active_engine_info,
+        get_memory_status, hibernate_local_model, set_memory_mode
+    )
     from backend.model_manager import model_manager
     from backend.hardware_detector import detect_hardware
     from backend.documents import ingest_document, search_documents, list_documents, delete_document
     from backend.agent.react_loop import run_agent_loop
 except ImportError:
-    from llm import generate_response, get_cloud_credentials, get_active_engine_info
+    from llm import (
+        generate_response, get_cloud_credentials, get_active_engine_info,
+        get_memory_status, hibernate_local_model, set_memory_mode
+    )
     from model_manager import model_manager
     from hardware_detector import detect_hardware
     from documents import ingest_document, search_documents, list_documents, delete_document
@@ -58,6 +64,7 @@ def get_full_ai_status() -> dict:
         base_status["engine"] = "cloud"
         base_status["cloud_provider"] = cloud_prov
         base_status["cloudProvider"] = cloud_prov
+    base_status["memory"] = get_memory_status()
     return base_status
 
 
@@ -118,33 +125,38 @@ async def trigger_think(request: ChatRequest):
     """
     Agentic ReAct Pipeline:
     Executes multi-step reasoning, runs data tools (live web search, document search)
-    and stages UI actions (addTask, createPlan, addFlashcard, addQuiz).
+    as autonomous steps, and returns the synthesis with actions.
     """
-    result = await run_agent_loop(
-        user_message=request.message,
-        conversation_history=request.conversation_history,
-        state_snapshot=request.state_snapshot,
-        api_key=request.api_key,
-        provider=request.provider,
-    )
-
-    # Legacy mapping for backwards compatibility with earlier UI
-    task_action = None
-    plan_proposal = None
-    for act in result.actions:
-        if act.get("action") == "addTask":
-            task_action = act.get("payload")
-        elif act.get("action") == "addPlan":
-            plan_proposal = act.get("payload", {}).get("items")
-
-    return {
-        "reply": result.reply,
-        "actions": result.actions,
-        "steps": result.steps,
-        "proposal": plan_proposal,
-        "task_action": task_action,
-        "task": task_action,
-    }
+    try:
+        result = await run_agent_loop(
+            user_message=request.message,
+            conversation_history=request.conversation_history,
+            state_snapshot=request.state_snapshot
+        )
+        engine_info = get_active_engine_info()
+        return {
+            "reply": result.reply,
+            "actions": result.actions,
+            "steps": result.steps,
+            "model": getattr(result, "engine", None) or engine_info.get("model", "orion-brain")
+        }
+    except Exception as e:
+        logger.warning("ReAct Agent Loop encountered error, falling back to direct LLM: %s", e)
+        # Resilient fallback to direct LLM generation
+        reply = await asyncio.to_thread(
+            generate_response,
+            user_prompt=request.message,
+            api_key=request.api_key,
+            provider=request.provider,
+            conversation_history=request.conversation_history
+        )
+        engine_info = get_active_engine_info()
+        return {
+            "reply": reply,
+            "actions": [],
+            "steps": [],
+            "model": engine_info.get("model", "orion-fallback")
+        }
 
 
 class SpeakRequest(BaseModel):
@@ -198,7 +210,24 @@ def cancel_ai_download():
 @app.post("/api/ai/model/delete")
 def delete_ai_model():
     """Deletes local GGUF model and frees disk space."""
+    hibernate_local_model()
     return model_manager.delete_model()
+
+
+class MemoryModeRequest(BaseModel):
+    mode: str
+
+
+@app.post("/api/ai/memory/hibernate")
+def trigger_hibernate():
+    """Forces immediate unload of local model from RAM and runs garbage collection."""
+    return hibernate_local_model()
+
+
+@app.post("/api/ai/memory/mode")
+def update_memory_mode(request: MemoryModeRequest):
+    """Sets memory lifecycle mode: 'eco' (auto-unload after 5m idle) or 'always_on'."""
+    return set_memory_mode(request.mode)
 
 
 @app.websocket("/ws/ai-status")

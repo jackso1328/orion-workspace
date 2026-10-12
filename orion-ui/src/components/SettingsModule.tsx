@@ -21,7 +21,9 @@ import {
   ExternalLink, 
   Eye, 
   EyeOff, 
-  XCircle 
+  XCircle,
+  Moon,
+  Zap
 } from "lucide-react";
 import { useOrionStore } from "../store/useOrionStore";
 import { ORION_MODES, OrionModeId } from "../config/modes";
@@ -36,6 +38,7 @@ export default function SettingsModule() {
     aiDownloadProgress,
     aiModelSizeFormatted,
     aiProvider,
+    aiMemoryState,
     setIsAiDownloadModalOpen,
     startAiModelDownload,
     pauseAiModelDownload,
@@ -43,6 +46,8 @@ export default function SettingsModule() {
     cancelAiModelDownload,
     deleteLocalModel,
     checkAiSystemStatus,
+    setAiMemoryMode,
+    hibernateLocalModel,
   } = useOrionStore();
 
   // Cloud credential state
@@ -56,6 +61,7 @@ export default function SettingsModule() {
   const [isDeletingModel, setIsDeletingModel] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isCheckingSystem, setIsCheckingSystem] = useState(false);
+  const [isHibernating, setIsHibernating] = useState(false);
 
   const isDownloading = aiEngineStatus === "downloading" || aiDownloadProgress.status === "downloading";
   const isPaused = aiEngineStatus === "paused" || aiDownloadProgress.status === "paused";
@@ -65,6 +71,11 @@ export default function SettingsModule() {
 
   useEffect(() => {
     checkCredentialStatus();
+    checkAiSystemStatus();
+    const interval = setInterval(() => {
+      checkAiSystemStatus();
+    }, 10000);
+    return () => clearInterval(interval);
   }, [provider]);
 
   const checkCredentialStatus = async () => {
@@ -128,6 +139,20 @@ export default function SettingsModule() {
       setStatusMessage("Failed to delete local model.");
     } finally {
       setIsDeletingModel(false);
+    }
+  };
+
+  const handleHibernate = async () => {
+    setIsHibernating(true);
+    try {
+      await hibernateLocalModel();
+      setStatusMessage("Local model unloaded from RAM (Freed ~2.1 GB).");
+      setTimeout(() => setStatusMessage(""), 4000);
+    } catch (err) {
+      console.error("Failed to hibernate model:", err);
+      setStatusMessage("Failed to hibernate model.");
+    } finally {
+      setIsHibernating(false);
     }
   };
 
@@ -454,6 +479,153 @@ export default function SettingsModule() {
                   <span>
                     {isPaused ? "Progress saved" : `Speed: ${aiDownloadProgress.speedMbps ? `${aiDownloadProgress.speedMbps.toFixed(1)} MB/s` : "--"}`}
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* Memory & Auto-Sleep Section (shown when model is installed) */}
+            {isModelInstalled && (
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: "12px",
+                  padding: "1rem 1.25rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.85rem",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Moon size={16} color={aiMemoryState?.isLoaded ? "#c084fc" : "#34d399"} />
+                    <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                      RAM Management & Auto-Sleep
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "0.78rem",
+                        padding: "3px 9px",
+                        borderRadius: "999px",
+                        fontWeight: 600,
+                        background: aiMemoryState?.isLoaded ? "rgba(139, 92, 246, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                        color: aiMemoryState?.isLoaded ? "#c084fc" : "#34d399",
+                        border: `1px solid ${aiMemoryState?.isLoaded ? "rgba(139, 92, 246, 0.3)" : "rgba(16, 185, 129, 0.3)"}`
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          background: aiMemoryState?.isLoaded ? "#c084fc" : "#34d399",
+                          boxShadow: aiMemoryState?.isLoaded ? "0 0 8px #c084fc" : "0 0 8px #34d399"
+                        }}
+                      />
+                      {aiMemoryState?.isLoaded ? "Active in RAM (~2.1 GB)" : "Sleeping (0 MB RAM)"}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                  <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-secondary)", maxWidth: "460px", lineHeight: 1.4 }}>
+                    {aiMemoryState?.isLoaded
+                      ? (aiMemoryState?.memoryMode === "eco"
+                          ? "Model is currently warm in memory. It will auto-sleep after 5 minutes of inactivity to release ~2.1 GB RAM back to your system."
+                          : "Model is kept warm in RAM for instantaneous responses.")
+                      : "Model is currently unloaded from RAM, keeping your system fast and cool for multitasking. It wakes automatically in ~2s on your next prompt."}
+                  </p>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {/* Eco vs Always-On Mode Toggle */}
+                    <div
+                      style={{
+                        display: "flex",
+                        background: "rgba(0, 0, 0, 0.25)",
+                        padding: "3px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        gap: "2px"
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setAiMemoryMode("eco")}
+                        style={{
+                          background: (aiMemoryState?.memoryMode ?? "eco") === "eco" ? "rgba(139, 92, 246, 0.3)" : "transparent",
+                          color: (aiMemoryState?.memoryMode ?? "eco") === "eco" ? "#ffffff" : "var(--text-secondary)",
+                          border: "none",
+                          borderRadius: "6px",
+                          padding: "5px 10px",
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px"
+                        }}
+                        title="Auto-unloads model after 5 minutes idle"
+                      >
+                        <Moon size={12} />
+                        Eco (Auto-Sleep)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiMemoryMode("always_on")}
+                        style={{
+                          background: aiMemoryState?.memoryMode === "always_on" ? "rgba(139, 92, 246, 0.3)" : "transparent",
+                          color: aiMemoryState?.memoryMode === "always_on" ? "#ffffff" : "var(--text-secondary)",
+                          border: "none",
+                          borderRadius: "6px",
+                          padding: "5px 10px",
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px"
+                        }}
+                        title="Keeps model loaded in RAM permanently"
+                      >
+                        <Zap size={12} />
+                        Always-On
+                      </button>
+                    </div>
+
+                    {/* 1-Click Hibernate Button (visible when loaded) */}
+                    {aiMemoryState?.isLoaded && (
+                      <button
+                        type="button"
+                        onClick={handleHibernate}
+                        disabled={isHibernating}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          background: "rgba(255, 255, 255, 0.06)",
+                          border: "1px solid rgba(255, 255, 255, 0.12)",
+                          borderRadius: "8px",
+                          padding: "6px 12px",
+                          color: "var(--text-primary)",
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                        title="Unload model immediately and free 2.1 GB RAM"
+                      >
+                        <Moon size={13} />
+                        {isHibernating ? "Hibernating..." : "Hibernate Now"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

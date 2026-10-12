@@ -41,6 +41,7 @@ export default function PermanentAiStatusBadge({ variant = "sidebar" }: Permanen
     aiDownloadProgress,
     aiModelSizeFormatted,
     aiProvider,
+    aiMemoryState,
     setIsAiDownloadModalOpen,
     pauseAiModelDownload,
     resumeAiModelDownload,
@@ -592,6 +593,26 @@ export default function PermanentAiStatusBadge({ variant = "sidebar" }: Permanen
                   ? "Connected to cloud provider via secure OS Keychain credentials."
                   : "Operating 100% offline via embedded in-process local weights."}
               </p>
+
+              {aiProvider === "local" && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    background: "rgba(255, 255, 255, 0.04)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: "6px",
+                    padding: "6px 8px",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  <span style={{ color: "#a1a1aa" }}>Memory:</span>
+                  <span style={{ color: aiMemoryState?.isLoaded ? "#c084fc" : "#34d399", fontWeight: 600 }}>
+                    {aiMemoryState?.isLoaded ? "Active (~2.1 GB RAM)" : "Sleeping (0 MB RAM 💤)"}
+                  </span>
+                </div>
+              )}
 
               <button
                 onClick={() => {

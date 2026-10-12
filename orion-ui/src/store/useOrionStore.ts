@@ -9,6 +9,13 @@ import { InboxItem } from '../domain/inbox/types';
 
 export type AiEngineStatus = 'checking' | 'cloud_ready' | 'local_ready' | 'needs_download' | 'downloading' | 'paused' | 'disabled';
 
+export interface AiMemoryState {
+  isLoaded: boolean;
+  memoryMode: 'eco' | 'always_on';
+  idleSeconds: number;
+  estimatedRamMb: number;
+}
+
 export interface AiDownloadProgress {
   status: 'idle' | 'downloading' | 'paused' | 'completed' | 'error';
   modelName: string;
@@ -284,6 +291,7 @@ export interface OrionState {
   aiDownloadProgress: AiDownloadProgress;
   aiModelSizeFormatted: string;
   aiProvider: 'cloud' | 'local' | 'none';
+  aiMemoryState: AiMemoryState;
 
   setAiEngineStatus: (status: AiEngineStatus) => void;
   setIsAiDownloadModalOpen: (open: boolean) => void;
@@ -295,6 +303,8 @@ export interface OrionState {
   cancelAiModelDownload: () => Promise<void>;
   deleteLocalModel: () => Promise<void>;
   checkAiSystemStatus: () => Promise<void>;
+  setAiMemoryMode: (mode: 'eco' | 'always_on') => Promise<void>;
+  hibernateLocalModel: () => Promise<void>;
 }
 
 const ACCENT_COLORS = ["#8b5cf6", "#6366f1", "#3b82f6", "#14b8a6", "#f59e0b", "#f43f5e"];
@@ -658,6 +668,12 @@ export const useOrionStore = create<OrionState>()(
       aiDownloadDeclined: false,
       aiModelSizeFormatted: '2.1 GB',
       aiProvider: 'none',
+      aiMemoryState: {
+        isLoaded: false,
+        memoryMode: 'eco',
+        idleSeconds: 0,
+        estimatedRamMb: 0,
+      },
       aiDownloadProgress: {
         status: 'idle',
         modelName: 'Qwen 2.5 3B Instruct (Q4_K_M)',
@@ -784,6 +800,12 @@ export const useOrionStore = create<OrionState>()(
         }
 
         set({
+          aiMemoryState: {
+            isLoaded: false,
+            memoryMode: 'eco',
+            idleSeconds: 0,
+            estimatedRamMb: 0,
+          },
           aiDownloadProgress: {
             status: 'idle',
             modelName: 'Qwen 2.5 3B Instruct (Q4_K_M)',
@@ -829,6 +851,16 @@ export const useOrionStore = create<OrionState>()(
           const res = await fetch('http://localhost:8000/api/ai/status');
           if (res.ok) {
             const data = await res.json();
+            if (data.memory) {
+              set({
+                aiMemoryState: {
+                  isLoaded: Boolean(data.memory.isLoaded),
+                  memoryMode: data.memory.memoryMode || 'eco',
+                  idleSeconds: Number(data.memory.idleSeconds || 0),
+                  estimatedRamMb: Number(data.memory.estimatedRamMb || 0),
+                }
+              });
+            }
             if (data.model_exists) {
               set({
                 aiEngineStatus: 'local_ready',
@@ -872,6 +904,52 @@ export const useOrionStore = create<OrionState>()(
             isAiDownloadModalOpen: true
           };
         });
+      },
+
+      setAiMemoryMode: async (mode: 'eco' | 'always_on') => {
+        set((s) => ({
+          aiMemoryState: { ...s.aiMemoryState, memoryMode: mode }
+        }));
+        try {
+          const res = await fetch('http://localhost:8000/api/ai/memory/mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            set((s) => ({
+              aiMemoryState: {
+                ...s.aiMemoryState,
+                memoryMode: data.memoryMode || mode,
+                isLoaded: data.isLoaded ?? s.aiMemoryState.isLoaded,
+                estimatedRamMb: data.estimatedRamMb ?? s.aiMemoryState.estimatedRamMb
+              }
+            }));
+          }
+        } catch (err) {
+          console.warn('Failed to set AI memory mode:', err);
+        }
+      },
+
+      hibernateLocalModel: async () => {
+        try {
+          const res = await fetch('http://localhost:8000/api/ai/memory/hibernate', {
+            method: 'POST'
+          });
+          if (res.ok) {
+            set((s) => ({
+              aiMemoryState: {
+                ...s.aiMemoryState,
+                isLoaded: false,
+                estimatedRamMb: 0,
+                idleSeconds: 0
+              }
+            }));
+          }
+        } catch (err) {
+          console.warn('Failed to hibernate local model:', err);
+        }
       },
 
     }),
