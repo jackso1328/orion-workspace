@@ -7,3 +7,5 @@ fastembed
 qdrant-client
 keyring
 duckduckgo-search
+llama-cpp-python
+websockets
