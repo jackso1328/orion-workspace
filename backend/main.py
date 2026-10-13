@@ -143,12 +143,10 @@ async def trigger_think(request: ChatRequest):
     except Exception as e:
         logger.warning("ReAct Agent Loop encountered error, falling back to direct LLM: %s", e)
         # Resilient fallback to direct LLM generation
-        reply = await asyncio.to_thread(
-            generate_response,
-            user_prompt=request.message,
+        reply = await generate_response(
+            user_message=request.message,
             api_key=request.api_key,
             provider=request.provider,
-            conversation_history=request.conversation_history
         )
         engine_info = get_active_engine_info()
         return {

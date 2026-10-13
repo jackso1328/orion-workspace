@@ -123,7 +123,8 @@ MODEL_CATALOG = {
         "n_gpu_layers": 0,
         "n_ctx": 4096,
         "n_threads": 8,
-        "description": "CPU-optimized 3B model for battery / integrated GPU mode",
+        "requires_gpu": False,
+        "description": "Adaptive 3B model: uses dedicated GPU if detected; falls back seamlessly to CPU",
     },
     "performance": {
         "model_name": "Qwen2.5-7B-Instruct-Q4_K_M",
@@ -135,7 +136,8 @@ MODEL_CATALOG = {
         "n_gpu_layers": -1,  # offload all layers to GPU
         "n_ctx": 4096,
         "n_threads": 4,
-        "description": "GPU-accelerated 7B model for dedicated NVIDIA GPU",
+        "requires_gpu": True,
+        "description": "Heavyweight 7B model: strictly requires dedicated GPU (>= 6GB VRAM)",
     },
 }
 
@@ -151,14 +153,17 @@ def detect_hardware() -> dict:
     vram_free = gpu["vram_free_mb"] if gpu else 0
     vram_total = gpu["vram_total_mb"] if gpu else 0
 
-    # Decision logic: Use the 7B GPU model only if we have an active
-    # dedicated NVIDIA GPU with at least 3500 MB free VRAM (or >= 4GB total VRAM).
-    if has_cuda and (vram_free >= 3500 or vram_total >= 4000):
+    # Decision logic: 7B model requires >=6GB VRAM (6000 MB) to fit weights + context.
+    # For <=4GB VRAM cards (e.g. RTX 3050 Laptop 4GB), 3B is the optimal model
+    # that fits entirely into VRAM with GPU acceleration and zero OOM risk.
+    if has_cuda and (vram_free >= 6000 or vram_total >= 6000):
         profile = "performance"
     else:
         profile = "battery"
 
-    model_info = MODEL_CATALOG[profile]
+    model_info = dict(MODEL_CATALOG[profile])
+    if has_cuda:
+        model_info["n_gpu_layers"] = -1
 
     result = {
         "cpu": cpu,

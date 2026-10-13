@@ -92,11 +92,21 @@ class ModelManager:
 
         # Hardware & model profile (detected once at init)
         self._hw = detect_hardware()
-        self._profile = self._hw["model"]
-        self._progress.model_name = self._profile["model_name"]
-        self._progress.total_bytes = self._profile["size_bytes"]
+        self._profile = dict(self._hw["model"])
 
         MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Check if an existing catalog model is already on disk
+        for prof_key, prof_val in MODEL_CATALOG.items():
+            candidate = MODEL_DIR / prof_val["filename"]
+            if candidate.exists():
+                self._profile = dict(prof_val)
+                if self._hw.get("has_cuda"):
+                    self._profile["n_gpu_layers"] = -1
+                break
+
+        self._progress.model_name = self._profile["model_name"]
+        self._progress.total_bytes = self._profile["size_bytes"]
 
         # Check if already completed on disk
         if self.model_exists:
@@ -114,7 +124,14 @@ class ModelManager:
 
     @property
     def model_path(self) -> Path:
-        return MODEL_DIR / self._profile["filename"]
+        primary = MODEL_DIR / self._profile["filename"]
+        if primary.exists():
+            return primary
+        for prof_key, prof_val in MODEL_CATALOG.items():
+            candidate = MODEL_DIR / prof_val["filename"]
+            if candidate.exists():
+                return candidate
+        return primary
 
     @property
     def part_path(self) -> Path:
@@ -150,12 +167,30 @@ class ModelManager:
 
     def get_status(self) -> dict:
         """Full status snapshot for the /api/ai/status endpoint."""
+        # Ensure self._profile stays in sync with on-disk model if present
+        if not (MODEL_DIR / self._profile["filename"]).exists():
+            for prof_key, prof_val in MODEL_CATALOG.items():
+                if (MODEL_DIR / prof_val["filename"]).exists():
+                    self._profile = dict(prof_val)
+                    if self._hw.get("has_cuda"):
+                        self._profile["n_gpu_layers"] = -1
+                    self._progress.model_name = self._profile["model_name"]
+                    self._progress.total_bytes = self._profile["size_bytes"]
+                    self._progress.status = DownloadStatus.COMPLETED
+                    self._progress.percent = 100.0
+                    self._progress.downloaded_bytes = self._profile["size_bytes"]
+                    break
+
         p = self.progress
         p_dict = p.to_dict()
 
         engine = "none"
         if self.model_exists and p.status != DownloadStatus.DOWNLOADING:
             engine = "local"
+
+        has_gpu = bool(self._hw.get("has_cuda"))
+        device_type = "gpu" if has_gpu else "cpu"
+        device_name = self._hw.get("gpu", {}).get("name", "NVIDIA Dedicated GPU") if has_gpu else self._hw.get("cpu", {}).get("name", "Multi-core CPU")
 
         return {
             "engine": engine,
@@ -164,6 +199,12 @@ class ModelManager:
             "model_path": str(self.model_path),
             "model_size_formatted": self._profile["size_formatted"],
             "modelSizeFormatted": self._profile["size_formatted"],
+            "execution_device": device_type,
+            "executionDevice": device_type,
+            "device_name": device_name,
+            "deviceName": device_name,
+            "gpu_accelerated": has_gpu,
+            "gpuAccelerated": has_gpu,
             "download_state": p_dict,
             "downloadProgress": p_dict,
             "hardware": {
@@ -178,7 +219,9 @@ class ModelManager:
                 "name": self._profile["model_name"],
                 "filename": self._profile["filename"],
                 "size_formatted": self._profile["size_formatted"],
-                "n_gpu_layers": self._profile["n_gpu_layers"],
+                "n_gpu_layers": -1 if has_gpu else 0,
+                "requires_gpu": self._profile.get("requires_gpu", False),
+                "execution_mode": "GPU Accelerated" if has_gpu else "CPU Mode",
             },
         }
 

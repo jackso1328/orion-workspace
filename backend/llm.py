@@ -89,12 +89,18 @@ def get_active_engine_info() -> dict:
     if model_manager.model_exists:
         mem = get_memory_status()
         state_str = "Active in RAM (~2.1 GB)" if mem["is_loaded"] else "Sleeping (0 MB RAM used)"
+        has_gpu = bool(model_manager.hardware_info.get("has_cuda"))
+        hw_desc = f"GPU: {model_manager.hardware_info.get('gpu', {}).get('name', 'NVIDIA CUDA')}" if has_gpu else "CPU Mode"
+        model_display_name = model_manager.model_info.get("model_name") or model_manager.model_info.get("name", "Qwen 2.5")
         return {
             "engine": "local",
             "provider": "llama-cpp",
             "model_path": str(model_manager.model_path),
             "ready": True,
-            "description": f"Local AI ({model_manager.model_info['model_name']} • {state_str})",
+            "description": f"Local AI ({model_display_name} • {hw_desc} • {state_str})",
+            "device": "gpu" if has_gpu else "cpu",
+            "device_name": model_manager.hardware_info.get("gpu", {}).get("name", "NVIDIA CUDA") if has_gpu else model_manager.hardware_info.get("cpu", {}).get("name", "Multi-core CPU"),
+            "gpu_accelerated": has_gpu,
             "memory": mem,
         }
 
@@ -216,20 +222,39 @@ def _get_local_llama():
         )
 
     profile = model_manager.model_info
+    has_gpu = bool(model_manager.hardware_info.get("has_cuda"))
+    requires_gpu = profile.get("requires_gpu", False)
+
+    # 1. Enforcement for large models (e.g. 7B):
+    if requires_gpu and not has_gpu:
+        raise RuntimeError(
+            f"The {profile.get('name', '7B')} model strictly requires a dedicated NVIDIA GPU with CUDA. "
+            "No compatible dedicated GPU was detected. Please switch to the adaptive 3B model which supports CPU execution."
+        )
+
+    # 2. Adaptive offloading for small models (and GPU execution for large models):
+    if has_gpu:
+        gpu_layers = -1
+        threads = 4
+        device_label = f"Dedicated GPU ({model_manager.hardware_info.get('gpu', {}).get('name', 'NVIDIA CUDA')})"
+    else:
+        gpu_layers = 0
+        threads = max(4, model_manager.hardware_info.get("cpu", {}).get("cores", 8))
+        device_label = f"CPU ({model_manager.hardware_info.get('cpu', {}).get('name', 'Multi-core CPU')})"
 
     logger.info(
-        "Waking local GGUF model from sleep: %s (gpu_layers=%s, ctx=%s, threads=%s, mmap=True)",
+        "Waking local GGUF model from sleep: %s on %s (gpu_layers=%s, ctx=2048, threads=%s, mmap=True)",
         current_path,
-        profile.get("n_gpu_layers", 0),
-        profile.get("n_ctx", 2048),
-        profile.get("n_threads", 4),
+        device_label,
+        gpu_layers,
+        threads,
     )
 
     _local_llama = Llama(
         model_path=current_path,
-        n_gpu_layers=profile.get("n_gpu_layers", 0),
-        n_ctx=profile.get("n_ctx", 2048),
-        n_threads=profile.get("n_threads", 4),
+        n_gpu_layers=gpu_layers,
+        n_ctx=2048,
+        n_threads=threads,
         use_mmap=True,
         verbose=False,
     )
