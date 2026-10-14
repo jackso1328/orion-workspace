@@ -10,8 +10,19 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 fn save_api_credential(provider: &str, secret: &str) -> Result<(), String> {
+    let clean = secret.trim();
+    if clean.is_empty() {
+        return Err("Credential cannot be empty".to_string());
+    }
     let entry = Entry::new(CANONICAL_SERVICE, provider).map_err(|e| e.to_string())?;
-    entry.set_password(secret).map_err(|e| e.to_string())?;
+    entry.set_password(clean).map_err(|e| e.to_string())?;
+
+    // Verify canonical write before cleaning up legacy entry
+    let verified = entry.get_password().map_err(|e| e.to_string())?;
+    if verified != clean {
+        return Err("Verification failed: saved credential does not match".to_string());
+    }
+
     // Clean up legacy service entry if present
     if let Ok(legacy_entry) = Entry::new(LEGACY_SERVICE, provider) {
         let _ = legacy_entry.delete_credential();
@@ -23,18 +34,37 @@ fn save_api_credential(provider: &str, secret: &str) -> Result<(), String> {
 fn check_api_credential(provider: &str) -> Result<bool, String> {
     // 1. Check canonical service
     if let Ok(entry) = Entry::new(CANONICAL_SERVICE, provider) {
-        if entry.get_password().is_ok() {
-            return Ok(true);
+        if let Ok(val) = entry.get_password() {
+            if !val.trim().is_empty() {
+                return Ok(true);
+            }
         }
     }
-    // 2. Check legacy service and migrate safely if found
+    // 2. Check legacy service and perform verified, non-destructive migration
     if let Ok(legacy_entry) = Entry::new(LEGACY_SERVICE, provider) {
-        if let Ok(secret) = legacy_entry.get_password() {
-            if let Ok(canonical_entry) = Entry::new(CANONICAL_SERVICE, provider) {
-                let _ = canonical_entry.set_password(&secret);
-                let _ = legacy_entry.delete_credential();
+        if let Ok(legacy_secret) = legacy_entry.get_password() {
+            let clean = legacy_secret.trim();
+            if !clean.is_empty() {
+                let mut migrated = false;
+                // Attempt write to canonical service
+                if let Ok(canonical_entry) = Entry::new(CANONICAL_SERVICE, provider) {
+                    if canonical_entry.set_password(clean).is_ok() {
+                        // Verify canonical credential is present and matches
+                        if let Ok(verified) = canonical_entry.get_password() {
+                            if verified == clean {
+                                migrated = true;
+                            }
+                        }
+                    }
+                }
+
+                if migrated {
+                    // Only delete legacy after canonical write has been verified!
+                    let _ = legacy_entry.delete_credential();
+                }
+                // Return true because a valid credential exists
+                return Ok(true);
             }
-            return Ok(true);
         }
     }
     Ok(false)

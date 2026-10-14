@@ -206,8 +206,15 @@ def get_ai_provider():
 @app.post("/api/ai/provider")
 def update_ai_provider(request: ProviderRequest):
     """Sets the active cloud provider preference."""
-    updated = set_selected_provider(request.provider)
-    return {"status": "ok", "provider": updated}
+    try:
+        updated = set_selected_provider(request.provider)
+        return {"status": "ok", "provider": updated}
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+    except (IOError, OSError) as io_err:
+        raise HTTPException(status_code=500, detail=str(io_err))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error persisting provider: {str(e)}")
 
 
 @app.post("/api/ai/download/start")

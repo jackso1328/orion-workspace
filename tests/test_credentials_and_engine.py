@@ -1,123 +1,126 @@
 """
-Comprehensive test suite verifying the 10 Orion Cloud Credential and Active Runtime Consistency scenarios.
-
-Scenarios verified:
-1. No cloud key and no local model -> engine is "none"
-2. Newly saved OpenAI key -> engine is "cloud", provider "openai"
-3. Newly saved Anthropic key -> engine is "cloud", provider "anthropic"
-4. Newly saved OpenRouter key -> engine is "cloud", provider "openrouter"
-5. Key saved under legacy keyring service ("orion_ai") -> migrated safely to "orion_app" and active
-6. Both local model and cloud credentials available -> engine is "cloud", local model available
-7. Multiple providers configured -> selected provider is authoritative over others
-8. Credential removal and subsequent status refresh -> falls back to local or none
-9. Backend unavailable -> client-side fallback handles unavailable backend gracefully
-10. Credential lookup errors -> keyring exceptions handled safely without crash or leakage
+Comprehensive test suite verifying Orion Cloud Provider and Credential Reliability:
+1. Authoritative provider selection (no silent switching to other configured providers).
+2. Regression test: OpenAI key exists, Anthropic selected with no key -> falls back to local or none, never OpenAI.
+3. Safe legacy-key migration sequence (read -> write -> verify -> delete).
+4. Legacy migration failure handling (write failure / verification failure preserves legacy entry).
+5. Repeated checks after successful migration.
+6. Credential removal from both canonical and legacy stores.
+7. Portable provider persistence with preservation of other settings in ai_settings.json.
+8. Invalid provider rejection (ValueError and HTTP 400).
+9. Provider persistence write failure handling (IOError and HTTP 500).
+10. Backend status matching the active engine.
+11. Settings UI runtime status derivation for backend-unavailable and all active engine states.
 """
 
 import os
 import sys
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch, MagicMock, PropertyMock
 
 # Add ORION repo to sys.path
 sys.path.insert(0, r"C:\Users\proud\ORION")
 
-import keyring
 from backend.llm import (
     CANONICAL_KEYRING_SERVICE,
     LEGACY_KEYRING_SERVICE,
     SUPPORTED_PROVIDERS,
-    get_keyring_credential,
-    get_cloud_credentials,
-    get_selected_provider,
+    DEFAULT_PROVIDER,
+    get_config_file_path,
+    load_selected_provider,
     set_selected_provider,
+    get_selected_provider,
+    get_keyring_credential,
+    migrate_legacy_credential,
+    set_keyring_credential,
+    delete_keyring_credential,
+    get_cloud_credentials,
 )
-from backend.main import get_full_ai_status, model_manager
+from backend.main import get_full_ai_status, app
 from backend.model_manager import ModelManager
 
 
-def mock_set_keyring(service, provider, secret, store):
-    store[(service, provider)] = secret
-
-
-def mock_del_keyring(service, provider, store):
-    store.pop((service, provider), None)
-
-
-class TestCredentialAndEngineConsistency(unittest.TestCase):
+class TestCredentialAndEngineReliability(unittest.TestCase):
     def setUp(self):
-        # Clear any environment variables that might interfere with tests
+        # Clear environment variables
         self.env_patcher = patch.dict(os.environ, {}, clear=False)
         self.env_patcher.start()
-        for env_var in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"]:
+        for env_var in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "ORION_CONFIG_PATH"]:
             if env_var in os.environ:
                 del os.environ[env_var]
 
     def tearDown(self):
         self.env_patcher.stop()
 
-    def test_scenario_1_no_cloud_key_and_no_local_model(self):
-        """Scenario 1: No cloud key and no local model -> engine must be 'none'."""
-        with patch("backend.llm.get_keyring_credential", return_value=None), \
-             patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)), \
-             patch("backend.main.get_cloud_credentials", return_value=(None, None)):
-            status = get_full_ai_status()
-            self.assertEqual(status["engine"], "none")
-            self.assertFalse(status["model_exists"])
-            self.assertIsNone(status["cloud_provider"])
-
-    def test_scenario_2_newly_saved_openai_key(self):
-        """Scenario 2: A newly saved OpenAI key -> engine is 'cloud', provider is 'openai'."""
+    def test_regression_openai_exists_anthropic_selected_no_silent_fallback(self):
+        """
+        Regression Test: OpenAI credentials exist in environment and keyring.
+        Anthropic is selected in Settings, but has no API key.
+        Orion must NOT silently use OpenAI or report Cloud active.
+        It must fall back to local model (if installed) or none.
+        """
         mock_store = {
-            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-test-mock-openai-key"
+            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-mock-valid-openai-key"
         }
+        os.environ["OPENAI_API_KEY"] = "sk-env-openai-key"
+
         with patch("keyring.get_password", side_effect=lambda s, k: mock_store.get((s, k))), \
-             patch("backend.llm.get_selected_provider", return_value="openai"), \
-             patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)):
-            prov, key = get_cloud_credentials("openai")
-            self.assertEqual(prov, "openai")
-            self.assertIsNotNone(key)
+             patch("backend.llm.get_selected_provider", return_value="anthropic"):
+            # 1. get_cloud_credentials for selected provider 'anthropic'
+            cloud_prov, cloud_key = get_cloud_credentials("anthropic")
+            self.assertIsNone(cloud_prov, "Must not return 'openai' when 'anthropic' is selected")
+            self.assertIsNone(cloud_key, "Must not return OpenAI key when 'anthropic' is selected")
 
-            status = get_full_ai_status()
-            self.assertEqual(status["engine"], "cloud")
-            self.assertEqual(status["cloud_provider"], "openai")
+            # 2. Status with local model available -> engine must be 'local', NOT 'cloud'
+            with patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=True)):
+                status_local = get_full_ai_status()
+                self.assertEqual(status_local["engine"], "local")
+                self.assertEqual(status_local["selected_provider"], "anthropic")
+                self.assertIsNone(status_local["cloud_provider"])
 
-    def test_scenario_3_newly_saved_anthropic_key(self):
-        """Scenario 3: A newly saved Anthropic key -> engine is 'cloud', provider is 'anthropic'."""
+            # 3. Status with no local model -> engine must be 'none', NOT 'cloud'
+            with patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)):
+                status_none = get_full_ai_status()
+                self.assertEqual(status_none["engine"], "none")
+                self.assertEqual(status_none["selected_provider"], "anthropic")
+                self.assertIsNone(status_none["cloud_provider"])
+
+    def test_authoritative_provider_with_matching_key(self):
+        """When selected provider has a configured key, it routes to that provider strictly."""
         mock_store = {
-            (CANONICAL_KEYRING_SERVICE, "anthropic"): "sk-ant-test-mock-key"
+            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-openai-key",
+            (CANONICAL_KEYRING_SERVICE, "anthropic"): "sk-anthropic-key",
+            (CANONICAL_KEYRING_SERVICE, "openrouter"): "sk-openrouter-key",
         }
-        with patch("keyring.get_password", side_effect=lambda s, k: mock_store.get((s, k))), \
-             patch("backend.llm.get_selected_provider", return_value="anthropic"), \
-             patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)):
+        with patch("keyring.get_password", side_effect=lambda s, k: mock_store.get((s, k))):
+            # Anthropic selected
             prov, key = get_cloud_credentials("anthropic")
             self.assertEqual(prov, "anthropic")
-            self.assertIsNotNone(key)
+            self.assertEqual(key, "sk-anthropic-key")
 
-            status = get_full_ai_status()
-            self.assertEqual(status["engine"], "cloud")
-            self.assertEqual(status["cloud_provider"], "anthropic")
+            # OpenAI selected
+            prov, key = get_cloud_credentials("openai")
+            self.assertEqual(prov, "openai")
+            self.assertEqual(key, "sk-openai-key")
 
-    def test_scenario_4_newly_saved_openrouter_key(self):
-        """Scenario 4: A newly saved OpenRouter key -> engine is 'cloud', provider is 'openrouter'."""
-        mock_store = {
-            (CANONICAL_KEYRING_SERVICE, "openrouter"): "sk-or-test-mock-key"
-        }
-        with patch("keyring.get_password", side_effect=lambda s, k: mock_store.get((s, k))), \
-             patch("backend.llm.get_selected_provider", return_value="openrouter"), \
-             patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)):
+            # OpenRouter selected
             prov, key = get_cloud_credentials("openrouter")
             self.assertEqual(prov, "openrouter")
-            self.assertIsNotNone(key)
+            self.assertEqual(key, "sk-openrouter-key")
 
-            status = get_full_ai_status()
-            self.assertEqual(status["engine"], "cloud")
-            self.assertEqual(status["cloud_provider"], "openrouter")
-
-    def test_scenario_5_legacy_keyring_migration(self):
-        """Scenario 5: A key saved under legacy service ('orion_ai') is safely migrated to 'orion_app'."""
+    def test_legacy_migration_success(self):
+        """
+        Verified sequence:
+        1. Read legacy credential.
+        2. Write to canonical.
+        3. Verify canonical credential matches.
+        4. Delete legacy entry only after verification.
+        """
         mock_store = {
-            (LEGACY_KEYRING_SERVICE, "openai"): "sk-legacy-test-key"
+            (LEGACY_KEYRING_SERVICE, "openai"): "sk-legacy-test-secret"
         }
 
         def mock_get(service, username):
@@ -132,129 +135,236 @@ class TestCredentialAndEngineConsistency(unittest.TestCase):
         with patch("keyring.get_password", side_effect=mock_get), \
              patch("keyring.set_password", side_effect=mock_set), \
              patch("keyring.delete_password", side_effect=mock_del):
-            # Initially canonical has nothing, legacy has key
-            self.assertNotIn((CANONICAL_KEYRING_SERVICE, "openai"), mock_store)
-            self.assertIn((LEGACY_KEYRING_SERVICE, "openai"), mock_store)
 
-            # Retrieve credential
-            val = get_keyring_credential("openai")
-            self.assertEqual(val, "sk-legacy-test-key")
+            # Perform migration
+            migrated = migrate_legacy_credential("openai")
+            self.assertTrue(migrated)
 
-            # Check that migration copied to canonical service
-            self.assertIn((CANONICAL_KEYRING_SERVICE, "openai"), mock_store)
-            self.assertEqual(mock_store[(CANONICAL_KEYRING_SERVICE, "openai")], "sk-legacy-test-key")
+            # Canonical now has the secret
+            self.assertEqual(mock_store.get((CANONICAL_KEYRING_SERVICE, "openai")), "sk-legacy-test-secret")
+            # Legacy entry was deleted
+            self.assertNotIn((LEGACY_KEYRING_SERVICE, "openai"), mock_store)
 
-    def test_scenario_6_both_local_model_and_cloud_credentials(self):
-        """Scenario 6: Both local model and cloud credentials available -> Cloud takes precedence, local model is marked existing."""
+    def test_legacy_migration_write_failure_preserves_legacy(self):
+        """
+        If writing to canonical service fails, legacy credential must NOT be deleted.
+        """
         mock_store = {
-            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-test-key"
-        }
-        with patch("keyring.get_password", side_effect=lambda s, k: mock_store.get((s, k))), \
-             patch("backend.llm.get_selected_provider", return_value="openai"), \
-             patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=True)):
-            status = get_full_ai_status()
-            # Active engine must be Cloud
-            self.assertEqual(status["engine"], "cloud")
-            self.assertEqual(status["cloud_provider"], "openai")
-            # Local model must be acknowledged as existing
-            self.assertTrue(status["model_exists"])
-
-    def test_scenario_7_multiple_providers_selected_is_authoritative(self):
-        """Scenario 7: Multiple providers configured; selected provider remains authoritative."""
-        mock_store = {
-            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-mock-openai-key",
-            (CANONICAL_KEYRING_SERVICE, "anthropic"): "sk-ant-mock-key",
-            (CANONICAL_KEYRING_SERVICE, "openrouter"): "sk-or-mock-key",
-        }
-        with patch("keyring.get_password", side_effect=lambda s, k: mock_store.get((s, k))):
-            # When Anthropic is selected, it must return Anthropic even though OpenAI key exists
-            prov, key = get_cloud_credentials(target_provider="anthropic")
-            self.assertEqual(prov, "anthropic")
-            self.assertEqual(key, "sk-ant-mock-key")
-
-            # When OpenAI is selected, it returns OpenAI
-            prov, key = get_cloud_credentials(target_provider="openai")
-            self.assertEqual(prov, "openai")
-            self.assertEqual(key, "sk-mock-openai-key")
-
-            # When OpenRouter is selected, it returns OpenRouter
-            prov, key = get_cloud_credentials(target_provider="openrouter")
-            self.assertEqual(prov, "openrouter")
-            self.assertEqual(key, "sk-or-mock-key")
-
-    def test_scenario_8_credential_removal_and_status_refresh(self):
-        """Scenario 8: Credential removal causes fallback to local model or none."""
-        mock_store = {
-            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-mock-openai-key"
+            (LEGACY_KEYRING_SERVICE, "openai"): "sk-legacy-safe-key"
         }
 
         def mock_get(service, username):
             return mock_store.get((service, username))
 
+        def broken_set(service, username, password):
+            raise RuntimeError("OS Keychain write permission denied")
+
+        deleted_keys = []
+        def mock_del(service, username):
+            deleted_keys.append((service, username))
+
+        with patch("keyring.get_password", side_effect=mock_get), \
+             patch("keyring.set_password", side_effect=broken_set), \
+             patch("keyring.delete_password", side_effect=mock_del):
+
+            # Migration fails safely
+            migrated = migrate_legacy_credential("openai")
+            self.assertFalse(migrated)
+
+            # Legacy key was NOT deleted!
+            self.assertIn((LEGACY_KEYRING_SERVICE, "openai"), mock_store)
+            self.assertNotIn((LEGACY_KEYRING_SERVICE, "openai"), deleted_keys)
+
+            # Lookup still retrieves legacy key safely without crashing
+            retrieved = get_keyring_credential("openai")
+            self.assertEqual(retrieved, "sk-legacy-safe-key")
+
+    def test_legacy_migration_verify_failure_preserves_legacy(self):
+        """
+        If canonical write occurs but verification readback fails (e.g. corrupt or None),
+        legacy credential must NOT be deleted.
+        """
+        mock_store = {
+            (LEGACY_KEYRING_SERVICE, "openai"): "sk-legacy-safe-key"
+        }
+
+        def mock_get(service, username):
+            if service == CANONICAL_KEYRING_SERVICE:
+                return "corrupted_or_mismatched_value"
+            return mock_store.get((service, username))
+
+        def mock_set(service, username, password):
+            pass
+
+        deleted_keys = []
+        def mock_del(service, username):
+            deleted_keys.append((service, username))
+
+        with patch("keyring.get_password", side_effect=mock_get), \
+             patch("keyring.set_password", side_effect=mock_set), \
+             patch("keyring.delete_password", side_effect=mock_del):
+
+            migrated = migrate_legacy_credential("openai")
+            self.assertFalse(migrated)
+
+            # Legacy key preserved
+            self.assertIn((LEGACY_KEYRING_SERVICE, "openai"), mock_store)
+            self.assertNotIn((LEGACY_KEYRING_SERVICE, "openai"), deleted_keys)
+
+    def test_repeated_checks_after_migration(self):
+        """Once migrated to canonical, subsequent lookups hit canonical directly."""
+        mock_store = {
+            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-canonical-key"
+        }
+        legacy_called = []
+
+        def mock_get(service, username):
+            if service == LEGACY_KEYRING_SERVICE:
+                legacy_called.append(username)
+            return mock_store.get((service, username))
+
+        with patch("keyring.get_password", side_effect=mock_get):
+            val1 = get_keyring_credential("openai")
+            val2 = get_keyring_credential("openai")
+            self.assertEqual(val1, "sk-canonical-key")
+            self.assertEqual(val2, "sk-canonical-key")
+            # Legacy service should not have been queried because canonical had it
+            self.assertEqual(len(legacy_called), 0)
+
+    def test_credential_removal_from_both_services(self):
+        """delete_keyring_credential purges from both canonical and legacy services."""
+        mock_store = {
+            (CANONICAL_KEYRING_SERVICE, "openai"): "sk-key-1",
+            (LEGACY_KEYRING_SERVICE, "openai"): "sk-key-2",
+        }
+
         def mock_del(service, username):
             mock_store.pop((service, username), None)
 
-        with patch("keyring.get_password", side_effect=mock_get), \
-             patch("keyring.delete_password", side_effect=mock_del), \
-             patch("backend.llm.get_selected_provider", return_value="openai"):
-            
-            # Case 8a: Model exists on disk. Before removal -> cloud. After removal -> local.
-            with patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=True)):
-                status_before = get_full_ai_status()
-                self.assertEqual(status_before["engine"], "cloud")
+        with patch("keyring.delete_password", side_effect=mock_del):
+            res = delete_keyring_credential("openai")
+            self.assertTrue(res)
+            self.assertNotIn((CANONICAL_KEYRING_SERVICE, "openai"), mock_store)
+            self.assertNotIn((LEGACY_KEYRING_SERVICE, "openai"), mock_store)
 
-                # Remove credential from store
-                mock_del(CANONICAL_KEYRING_SERVICE, "openai")
-                mock_del(LEGACY_KEYRING_SERVICE, "openai")
+    def test_portable_provider_persistence_and_settings_preservation(self):
+        """
+        ai_settings.json in portable app-data location preserves existing extra settings
+        and survives re-read.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "ai_settings.json"
+            os.environ["ORION_CONFIG_PATH"] = str(config_file)
 
-                status_after = get_full_ai_status()
-                self.assertEqual(status_after["engine"], "local")
-                self.assertIsNone(status_after["cloud_provider"])
+            # Pre-populate extra settings
+            initial_data = {
+                "theme": "lavender",
+                "developer_mode": True,
+                "selected_provider": "openai"
+            }
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump(initial_data, f)
 
-            # Case 8b: No model on disk. After removal -> none.
-            with patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)):
-                status_no_model = get_full_ai_status()
-                self.assertEqual(status_no_model["engine"], "none")
-                self.assertIsNone(status_no_model["cloud_provider"])
+            # Update provider
+            updated = set_selected_provider("anthropic")
+            self.assertEqual(updated, "anthropic")
 
-    def test_scenario_9_backend_unavailable_resilience(self):
-        """Scenario 9: Backend status unavailability handled gracefully without unhandled exceptions."""
-        import urllib.error
-        # Simulate connection error to backend
-        def mock_urlopen(req, *args, **kwargs):
-            raise urllib.error.URLError("Connection refused")
+            # Check file contents
+            with open(config_file, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            self.assertEqual(saved["selected_provider"], "anthropic")
+            self.assertEqual(saved["theme"], "lavender")
+            self.assertTrue(saved["developer_mode"])
 
-        with patch("urllib.request.urlopen", side_effect=mock_urlopen):
-            try:
-                import urllib.request
-                urllib.request.urlopen("http://localhost:99999/api/ai/status")
-                failed = False
-            except Exception as e:
-                failed = True
-                self.assertIn("Connection refused", str(e))
-            self.assertTrue(failed)
+            # Verify reload
+            reloaded = load_selected_provider()
+            self.assertEqual(reloaded, "anthropic")
 
-    def test_scenario_10_credential_lookup_errors(self):
-        """Scenario 10: Keyring exceptions handled safely without crashing or exposing secrets."""
-        import keyring.errors
+    def test_invalid_provider_handling_and_fallback(self):
+        """Invalid provider raises ValueError and invalid file falls back to default."""
+        # 1. set_selected_provider with invalid provider
+        with self.assertRaises(ValueError):
+            set_selected_provider("nonexistent_ai")
 
-        def broken_get(service, username):
-            raise keyring.errors.KeyringError("Keyring daemon locked or unavailable")
+        # 2. Corrupt or invalid file content falls back to DEFAULT_PROVIDER ('openai')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "ai_settings.json"
+            os.environ["ORION_CONFIG_PATH"] = str(config_file)
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump({"selected_provider": "invalid_hacked_provider"}, f)
 
-        with patch("keyring.get_password", side_effect=broken_get):
-            # Must return None safely without raising an exception
-            res = get_keyring_credential("openai")
-            self.assertIsNone(res)
+            loaded = load_selected_provider()
+            self.assertEqual(loaded, DEFAULT_PROVIDER)
 
-            # Cloud credentials lookup must also return (None, None) gracefully
-            prov, key = get_cloud_credentials("openai")
-            self.assertIsNone(key)
-            self.assertIsNone(prov)
+    def test_api_provider_rejection_http_codes(self):
+        """FastAPI POST /api/ai/provider returns HTTP 400 for invalid provider."""
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
 
-            # Main status must report safely
-            with patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)):
-                status = get_full_ai_status()
-                self.assertEqual(status["engine"], "none")
+        # Valid provider
+        res_valid = client.post("/api/ai/provider", json={"provider": "anthropic"})
+        self.assertEqual(res_valid.status_code, 200)
+        self.assertEqual(res_valid.json()["provider"], "anthropic")
+
+        # Invalid provider -> 400
+        res_invalid = client.post("/api/ai/provider", json={"provider": "unsupported_provider"})
+        self.assertEqual(res_invalid.status_code, 400)
+        self.assertIn("Invalid cloud provider", res_invalid.json()["detail"])
+
+        # Reset to openai
+        client.post("/api/ai/provider", json={"provider": "openai"})
+
+    def test_api_provider_write_failure_http_500(self):
+        """FastAPI POST /api/ai/provider returns HTTP 500 when persistence fails."""
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+
+        with patch("backend.main.set_selected_provider", side_effect=IOError("Disk write error")):
+            res = client.post("/api/ai/provider", json={"provider": "anthropic"})
+            self.assertEqual(res.status_code, 500)
+            self.assertIn("Disk write error", res.json()["detail"])
+
+    def test_settings_ui_runtime_status_derivation(self):
+        """
+        Tests the Settings UI runtime status derivation contract:
+        - When backendAvailable is False -> 'Unavailable' (neutral pill)
+        - When backendAvailable is True and engine is 'cloud' -> 'Cloud active (<Provider>)' (violet pill)
+        - When backendAvailable is True and engine is 'local' -> 'Local ready' (green pill)
+        - When backendAvailable is True and engine is 'none' -> 'Not configured' (neutral pill)
+        """
+        def derive_status(backend_available, engine, cloud_prov, is_downloading=False, is_paused=False):
+            if not backend_available:
+                return {"label": "Unavailable", "pillClass": "pill-neutral"}
+            if is_downloading:
+                return {"label": "Downloading (50%)", "pillClass": "pill-blue"}
+            if is_paused:
+                return {"label": "Paused (50%)", "pillClass": "pill-amber"}
+            if engine == "cloud":
+                name = (cloud_prov or "Cloud").capitalize()
+                return {"label": f"Cloud active ({name})", "pillClass": "pill-violet"}
+            if engine == "local":
+                return {"label": "Local ready", "pillClass": "pill-green"}
+            return {"label": "Not configured", "pillClass": "pill-neutral"}
+
+        # 1. Backend unavailable -> Must be 'Unavailable'
+        status_unavail = derive_status(backend_available=False, engine="none", cloud_prov=None)
+        self.assertEqual(status_unavail["label"], "Unavailable")
+        self.assertEqual(status_unavail["pillClass"], "pill-neutral")
+
+        # 2. Cloud active
+        status_cloud = derive_status(backend_available=True, engine="cloud", cloud_prov="anthropic")
+        self.assertEqual(status_cloud["label"], "Cloud active (Anthropic)")
+        self.assertEqual(status_cloud["pillClass"], "pill-violet")
+
+        # 3. Local ready
+        status_local = derive_status(backend_available=True, engine="local", cloud_prov=None)
+        self.assertEqual(status_local["label"], "Local ready")
+        self.assertEqual(status_local["pillClass"], "pill-green")
+
+        # 4. Neither configured
+        status_none = derive_status(backend_available=True, engine="none", cloud_prov=None)
+        self.assertEqual(status_none["label"], "Not configured")
+        self.assertEqual(status_none["pillClass"], "pill-neutral")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { invoke } from '@tauri-apps/api/core';
 import { OrionModeId } from '../config/modes';
 import { Plan, PlanItem, PlanStatus } from '../domain/planning/types';
 import { validatePlanItems } from '../domain/planning/validation';
@@ -707,15 +706,23 @@ export const useOrionStore = create<OrionState>()(
       }),
 
       setSelectedCloudProvider: async (provider) => {
-        set({ selectedCloudProvider: provider });
         try {
-          await fetch('http://localhost:8000/api/ai/provider', {
+          const res = await fetch('http://localhost:8000/api/ai/provider', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ provider })
           });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.provider) {
+              set({ selectedCloudProvider: data.provider });
+            }
+          } else {
+            console.warn('Backend rejected provider selection:', res.status);
+          }
         } catch {
-          // Backend offline or starting up
+          // Backend offline - update store locally
+          set({ selectedCloudProvider: provider });
         }
         await useOrionStore.getState().checkAiSystemStatus();
       },
@@ -893,39 +900,14 @@ export const useOrionStore = create<OrionState>()(
             return;
           }
         } catch {
-          // Backend offline or starting up
-        }
-
-        // Step 2: Fallback when backend is offline — check native OS Keychain via Tauri
-        let hasCloudKey = false;
-        const currentSelected = useOrionStore.getState().selectedCloudProvider || 'openai';
-        const providers = [currentSelected, 'openai', 'anthropic', 'openrouter'];
-        for (const prov of providers) {
-          try {
-            const configured = await invoke<boolean>('check_api_credential', { provider: prov });
-            if (configured) {
-              hasCloudKey = true;
-              break;
-            }
-          } catch {
-            // Not running in Tauri or keychain unavailable
-          }
-        }
-
-        if (hasCloudKey) {
+          // Backend offline or unreachable
           set({
-            aiEngineStatus: 'cloud_ready',
-            aiProvider: 'cloud',
+            aiEngineStatus: 'disabled',
+            aiProvider: 'none',
             isAiDownloadModalOpen: false
           });
           return;
         }
-
-        set((state) => ({
-          aiEngineStatus: state.aiDownloadDeclined ? 'disabled' : 'needs_download',
-          aiProvider: 'none',
-          isAiDownloadModalOpen: false
-        }));
       },
 
       setAiMemoryMode: async (mode: 'eco' | 'always_on') => {

@@ -34,52 +34,95 @@ logger = logging.getLogger("orion.llm")
 # Canonical and backward-compatible legacy OS Keyring service identifiers
 CANONICAL_KEYRING_SERVICE = "orion_app"
 LEGACY_KEYRING_SERVICE = "orion_ai"
+DEFAULT_PROVIDER = "openai"
 SUPPORTED_PROVIDERS = ["openai", "anthropic", "openrouter"]
 
-CONFIG_FILE_PATH = Path("C:/Users/proud/ORION/data/ai_settings.json")
+
+def get_config_file_path() -> Path:
+    """Return portable OS-specific application data config path."""
+    if os.environ.get("ORION_CONFIG_PATH"):
+        return Path(os.environ["ORION_CONFIG_PATH"])
+    if os.name == "nt":
+        base_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "Orion"
+    else:
+        base_dir = Path.home() / ".orion"
+    return base_dir / "ai_settings.json"
+
 
 # In-memory cached selected provider
-_selected_provider: str = "openai"
+_selected_provider: str = DEFAULT_PROVIDER
 
 
 def load_selected_provider() -> str:
-    """Load persisted cloud provider preference from disk, defaulting to 'openai'."""
+    """
+    Load persisted cloud provider preference from portable app-data location.
+    Falls back to documented default ('openai') if missing or invalid.
+    Preserves other fields in ai_settings.json.
+    """
     global _selected_provider
+    config_path = get_config_file_path()
     try:
-        if CONFIG_FILE_PATH.exists():
-            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+        if not config_path.exists():
+            # Check legacy repo data directory for backward compatibility
+            repo_data_path = Path(__file__).resolve().parent.parent / "data" / "ai_settings.json"
+            if repo_data_path.exists():
+                try:
+                    config_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(repo_data_path, config_path)
+                except Exception as copy_err:
+                    logger.debug("Could not copy legacy settings: %s", copy_err)
+
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 prov = data.get("selected_provider", "").strip().lower()
                 if prov in SUPPORTED_PROVIDERS:
                     _selected_provider = prov
                     return _selected_provider
+                else:
+                    logger.warning(
+                        "Invalid provider '%s' in %s; falling back to default '%s'",
+                        prov, config_path, DEFAULT_PROVIDER
+                    )
     except Exception as e:
         logger.debug("Could not read ai_settings.json: %s", e)
-    _selected_provider = "openai"
+
+    _selected_provider = DEFAULT_PROVIDER
     return _selected_provider
 
 
 def set_selected_provider(prov: str) -> str:
-    """Persist and update the active cloud provider selection."""
+    """
+    Persist and update the active cloud provider selection.
+    Raises ValueError on invalid provider.
+    Raises IOError on persistence failure.
+    Preserves other configuration fields in ai_settings.json.
+    """
     global _selected_provider
-    prov_clean = prov.strip().lower()
-    if prov_clean in SUPPORTED_PROVIDERS:
+    prov_clean = (prov or "").strip().lower()
+    if prov_clean not in SUPPORTED_PROVIDERS:
+        raise ValueError(
+            f"Invalid cloud provider '{prov}'. Supported providers are: {', '.join(SUPPORTED_PROVIDERS)}"
+        )
+
+    config_path = get_config_file_path()
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        existing_data = {}
+        if config_path.exists():
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    existing_data = json.load(f)
+            except Exception:
+                existing_data = {}
+        existing_data["selected_provider"] = prov_clean
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(existing_data, f, indent=2)
         _selected_provider = prov_clean
-        try:
-            CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-            existing_data = {}
-            if CONFIG_FILE_PATH.exists():
-                try:
-                    with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
-                        existing_data = json.load(f)
-                except Exception:
-                    pass
-            existing_data["selected_provider"] = _selected_provider
-            with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
-                json.dump(existing_data, f, indent=2)
-        except Exception as e:
-            logger.warning("Could not persist selected provider: %s", e)
-    return _selected_provider
+        return _selected_provider
+    except Exception as e:
+        logger.error("Failed to persist selected provider to %s: %s", config_path, e)
+        raise IOError(f"Could not persist provider configuration: {e}")
 
 
 def get_selected_provider() -> str:
@@ -110,8 +153,13 @@ DEFAULT_SYSTEM_PROMPT = (
 def get_keyring_credential(provider: str) -> Optional[str]:
     """
     Safely retrieve API credential for provider from OS Keyring.
-    Checks canonical service ('orion_app') first, then legacy service ('orion_ai').
-    Automatically and non-destructively migrates legacy entry to canonical service.
+    Checks canonical service ('orion_app') first.
+    If missing, checks legacy service ('orion_ai') and performs safe, non-destructive migration:
+      1. Read legacy credential.
+      2. Write to canonical service.
+      3. Verify canonical credential matches without logging or exposing secret.
+      4. Only delete legacy entry upon verified write.
+      5. If write or verification fails, preserve legacy entry and return the legacy value safely.
     Never logs or exposes the credential value.
     """
     try:
@@ -124,16 +172,30 @@ def get_keyring_credential(provider: str) -> Optional[str]:
         except Exception as e:
             logger.debug("Canonical keyring lookup failed for %s: %s", provider, type(e).__name__)
 
-        # 2. Legacy service fallback + non-destructive migration
+        # 2. Legacy service fallback + non-destructive verified migration
         try:
             legacy_key = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
             if legacy_key and legacy_key.strip():
+                clean_legacy = legacy_key.strip()
+                migrated = False
                 try:
-                    keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, legacy_key.strip())
-                    keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
-                except Exception as mig_err:
-                    logger.debug("Keyring migration notice: %s", type(mig_err).__name__)
-                return legacy_key.strip()
+                    keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, clean_legacy)
+                    # Verify canonical credential is present and matches
+                    verified = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
+                    if verified and verified.strip() == clean_legacy:
+                        migrated = True
+                except Exception as write_err:
+                    logger.debug("Failed writing canonical credential during migration: %s", type(write_err).__name__)
+
+                if migrated:
+                    try:
+                        keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
+                    except Exception as del_err:
+                        logger.debug("Could not remove legacy key after verified migration: %s", type(del_err).__name__)
+
+                # Return the valid credential regardless of whether legacy deletion succeeded,
+                # but legacy was NOT deleted if canonical write/verification failed!
+                return clean_legacy
         except Exception as e:
             logger.debug("Legacy keyring lookup failed for %s: %s", provider, type(e).__name__)
     except Exception as e:
@@ -141,22 +203,103 @@ def get_keyring_credential(provider: str) -> Optional[str]:
     return None
 
 
+def migrate_legacy_credential(provider: str) -> bool:
+    """
+    Attempt safe, non-destructive migration of provider credential from legacy to canonical service.
+    Returns True ONLY if canonical write was verified and legacy key was deleted.
+    Returns False if legacy key doesn't exist, canonical write fails, or verification fails.
+    Preserves legacy entry on any write or verification failure.
+    Never exposes or logs secrets.
+    """
+    try:
+        import keyring
+        legacy_key = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
+        if not legacy_key or not legacy_key.strip():
+            return False
+        clean = legacy_key.strip()
+
+        try:
+            keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, clean)
+        except Exception as e:
+            logger.debug("Canonical write failed during migration: %s", type(e).__name__)
+            return False
+
+        try:
+            verified = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
+            if not verified or verified.strip() != clean:
+                logger.debug("Canonical verification failed during migration")
+                return False
+        except Exception as e:
+            logger.debug("Canonical verify lookup failed: %s", type(e).__name__)
+            return False
+
+        try:
+            keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
+        except Exception as e:
+            logger.debug("Legacy deletion notice: %s", type(e).__name__)
+
+        return True
+    except Exception as e:
+        logger.debug("Migration failed: %s", type(e).__name__)
+        return False
+
+
+def set_keyring_credential(provider: str, secret: str) -> bool:
+    """
+    Save provider credential to canonical service and verify write before deleting legacy entry.
+    Returns True if safely saved and verified, False otherwise.
+    """
+    clean = (secret or "").strip()
+    if not clean:
+        return False
+    try:
+        import keyring
+        keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, clean)
+        verified = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
+        if not verified or verified.strip() != clean:
+            return False
+        try:
+            keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        logger.debug("Keyring write error: %s", type(e).__name__)
+        return False
+
+
+def delete_keyring_credential(provider: str) -> bool:
+    """
+    Remove provider credential from both canonical and legacy services.
+    Returns True if attempted safely.
+    """
+    try:
+        import keyring
+        for service in (CANONICAL_KEYRING_SERVICE, LEGACY_KEYRING_SERVICE):
+            try:
+                keyring.delete_password(service, provider)
+            except Exception:
+                pass
+        return True
+    except Exception as e:
+        logger.debug("Keyring delete error: %s", type(e).__name__)
+        return False
+
+
 def get_cloud_credentials(target_provider: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
     """
-    Detect configured cloud credentials following strict precedence:
-    1. Selected Provider (target_provider or persisted user selection in Settings):
-       a. Environment variable (e.g. OPENAI_API_KEY)
-       b. Canonical OS Keyring ('orion_app')
-       c. Legacy OS Keyring ('orion_ai') with auto-migration
-    2. Fallback Providers (in order: openai -> anthropic -> openrouter):
-       a. Environment variable
-       b. Canonical OS Keyring
-       c. Legacy OS Keyring with auto-migration
-    Returns (provider, api_key) or (None, None). Never logs secret keys.
+    Detect configured cloud credentials following strict authoritative precedence:
+    The selected provider is authoritative:
+      1. Environment variable for selected provider (e.g. OPENAI_API_KEY)
+      2. Canonical OS Keyring ('orion_app') for selected provider
+      3. Legacy OS Keyring ('orion_ai') for selected provider with safe, non-destructive migration
+    Returns (provider, api_key) or (None, None).
+    Never silently switches to another cloud provider if the selected provider lacks credentials.
+    Never logs or exposes secret keys.
     """
-    selected = (target_provider or get_selected_provider() or "openai").strip().lower()
+    selected = (target_provider or get_selected_provider() or DEFAULT_PROVIDER).strip().lower()
     if selected not in SUPPORTED_PROVIDERS:
-        selected = "openai"
+        selected = DEFAULT_PROVIDER
 
     env_map = {
         "openai": "OPENAI_API_KEY",
@@ -164,8 +307,9 @@ def get_cloud_credentials(target_provider: Optional[str] = None) -> Tuple[Option
         "openrouter": "OPENROUTER_API_KEY",
     }
 
-    # Priority 1: Check selected provider first (authoritative!)
-    env_val = os.getenv(env_map.get(selected, ""))
+    # Authoritative: Check selected provider ONLY
+    env_var_name = env_map.get(selected, "")
+    env_val = os.getenv(env_var_name)
     if env_val and env_val.strip():
         return selected, env_val.strip()
 
@@ -173,18 +317,7 @@ def get_cloud_credentials(target_provider: Optional[str] = None) -> Tuple[Option
     if keyring_val and keyring_val.strip():
         return selected, keyring_val.strip()
 
-    # Priority 2: Fallback to remaining configured providers if selected has no key
-    for prov in SUPPORTED_PROVIDERS:
-        if prov == selected:
-            continue
-        env_val = os.getenv(env_map.get(prov, ""))
-        if env_val and env_val.strip():
-            return prov, env_val.strip()
-
-        keyring_val = get_keyring_credential(prov)
-        if keyring_val and keyring_val.strip():
-            return prov, keyring_val.strip()
-
+    # Do not silently fall back to other cloud providers!
     return None, None
 
 

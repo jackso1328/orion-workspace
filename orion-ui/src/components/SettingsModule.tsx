@@ -361,10 +361,7 @@ export default function SettingsModule() {
 
   // Truthful runtime readiness helper displayed strictly in the header badge
   const getRuntimeStatus = (): { label: string; pillClass: string } => {
-    if (!backendStatus.backendAvailable && backendStatus.executionDevice === "unavailable") {
-      if (credentialStatus === "configured") {
-        return { label: `Cloud ready (${formatProviderName(provider)})`, pillClass: "pill-violet" };
-      }
+    if (!backendStatus.backendAvailable) {
       return { label: "Unavailable", pillClass: "pill-neutral" };
     }
     if (isDownloading) {
