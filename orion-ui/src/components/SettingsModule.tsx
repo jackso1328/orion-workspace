@@ -24,12 +24,19 @@ import { useOrionStore } from "../store/useOrionStore";
 import { ORION_MODES, OrionModeId } from "../config/modes";
 import "./SettingsModule.css";
 
-interface HardwareStatus {
+interface BackendAiStatus {
+  backendAvailable: boolean;
+  modelExists: boolean;
+  modelName: string;
+  modelFilename: string;
+  modelSizeFormatted: string;
+  modelProfile: string;
   executionDevice: "detecting" | "gpu" | "cpu" | "unavailable";
   deviceName: string;
   gpuAccelerated: boolean;
   cpuName: string;
   gpuName: string;
+  engine: "local" | "cloud" | "none";
 }
 
 interface InfoTooltipProps {
@@ -38,49 +45,69 @@ interface InfoTooltipProps {
 }
 
 /**
- * Accessible contextual help popover component.
- * Non-clipping, hover/focus/click enabled, Esc dismiss.
+ * Hardened accessible contextual help popover component.
+ * Separates hover/focus from click-pinned state so clicking doesn't close on open.
+ * Supports mouse hover, keyboard focus/tab, touch, and Escape dismissal.
  */
 function InfoTooltip({ content, ariaLabel = "More information" }: InfoTooltipProps) {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
+
+  const isVisible = isHovered || isPinned;
 
   useEffect(() => {
     if (!isVisible) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setIsVisible(false);
+        setIsPinned(false);
+        setIsHovered(false);
       }
     };
-    const handleClickOutside = (e: MouseEvent) => {
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsVisible(false);
+        setIsPinned(false);
+        setIsHovered(false);
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [isVisible]);
+
+  const handleTriggerClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    setIsPinned((prev) => {
+      const next = !prev;
+      if (!next) {
+        setIsHovered(false);
+      }
+      return next;
+    });
+  };
 
   return (
     <span 
       ref={containerRef}
       className="settings-tooltip-wrapper"
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <button
         type="button"
-        className="settings-info-trigger"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsVisible((prev) => !prev);
-        }}
-        onFocus={() => setIsVisible(true)}
-        onBlur={() => setIsVisible(false)}
+        className={`settings-info-trigger ${isVisible ? "active" : ""}`}
+        onClick={handleTriggerClick}
+        onFocus={() => setIsHovered(true)}
+        onBlur={() => setIsHovered(false)}
         aria-label={ariaLabel}
         aria-expanded={isVisible}
       >
@@ -88,7 +115,11 @@ function InfoTooltip({ content, ariaLabel = "More information" }: InfoTooltipPro
       </button>
 
       {isVisible && (
-        <span className="settings-popover" role="tooltip">
+        <span 
+          className="settings-popover" 
+          role="tooltip"
+          onClick={(e) => e.stopPropagation()}
+        >
           {content}
         </span>
       )}
@@ -135,20 +166,27 @@ export default function SettingsModule() {
   const [isCheckingSystem, setIsCheckingSystem] = useState(false);
   const [isHibernating, setIsHibernating] = useState(false);
 
-  // Truthful hardware status initialized to explicit detecting state
-  const [hardwareStatus, setHardwareStatus] = useState<HardwareStatus>({
+  // Dynamic backend metadata with explicit detecting initial state
+  const [backendStatus, setBackendStatus] = useState<BackendAiStatus>({
+    backendAvailable: false,
+    modelExists: false,
+    modelName: "",
+    modelFilename: "",
+    modelSizeFormatted: "",
+    modelProfile: "",
     executionDevice: "detecting",
     deviceName: "Detecting...",
     gpuAccelerated: false,
     cpuName: "Detecting...",
-    gpuName: "Detecting..."
+    gpuName: "Detecting...",
+    engine: "none"
   });
 
-  const isDownloading = aiEngineStatus === "downloading" || aiDownloadProgress.status === "downloading";
-  const isPaused = aiEngineStatus === "paused" || aiDownloadProgress.status === "paused";
-  const isLocalReady = aiEngineStatus === "local_ready";
+  const isModelInstalled = backendStatus.backendAvailable ? backendStatus.modelExists : false;
+  const isDownloading = aiEngineStatus === "downloading" || (aiDownloadProgress.status === "downloading" && !isModelInstalled);
+  const isPaused = aiEngineStatus === "paused" || (aiDownloadProgress.status === "paused" && !isModelInstalled);
+  const isLocalReady = backendStatus.backendAvailable && isModelInstalled && !isDownloading && !isPaused;
   const isCloudReady = aiEngineStatus === "cloud_ready";
-  const isModelInstalled = isLocalReady || (aiDownloadProgress.status === "completed");
 
   useEffect(() => {
     checkCredentialStatus();
@@ -167,16 +205,38 @@ export default function SettingsModule() {
         const data = await res.json();
         const isGpu = Boolean(data.gpu_accelerated ?? data.gpuAccelerated);
         const dev = data.execution_device || data.executionDevice || (isGpu ? "gpu" : "cpu");
-        setHardwareStatus({
+        
+        const resolvedModelName = 
+          data.model_info?.name || 
+          data.download_state?.model_name || 
+          data.download_state?.modelName || 
+          "";
+        const resolvedFilename = data.model_info?.filename || "";
+        const resolvedSize = 
+          data.model_size_formatted || 
+          data.modelSizeFormatted || 
+          data.model_info?.size_formatted || 
+          "";
+        const resolvedProfile = data.hardware?.selected_profile || "";
+
+        setBackendStatus({
+          backendAvailable: true,
+          modelExists: Boolean(data.model_exists ?? data.modelExists),
+          modelName: resolvedModelName,
+          modelFilename: resolvedFilename,
+          modelSizeFormatted: resolvedSize,
+          modelProfile: resolvedProfile,
           executionDevice: dev === "gpu" ? "gpu" : "cpu",
           deviceName: data.device_name || data.deviceName || (isGpu ? "Dedicated GPU" : "Multi-core CPU"),
           gpuAccelerated: isGpu,
           cpuName: data.hardware?.cpu?.name || "Host CPU",
-          gpuName: data.hardware?.gpu?.name || "Dedicated GPU"
+          gpuName: data.hardware?.gpu?.name || "Dedicated GPU",
+          engine: data.engine || (data.model_exists ? "local" : "none")
         });
       } else {
-        setHardwareStatus(prev => ({
+        setBackendStatus(prev => ({
           ...prev,
+          backendAvailable: false,
           executionDevice: "unavailable",
           deviceName: "Unavailable",
           cpuName: "Unavailable",
@@ -184,8 +244,9 @@ export default function SettingsModule() {
         }));
       }
     } catch {
-      setHardwareStatus(prev => ({
+      setBackendStatus(prev => ({
         ...prev,
+        backendAvailable: false,
         executionDevice: "unavailable",
         deviceName: "Unavailable",
         cpuName: "Unavailable",
@@ -246,6 +307,7 @@ export default function SettingsModule() {
       await deleteLocalModel();
       setShowDeleteConfirm(false);
       setStatusMessage("Local model deleted and disk space recovered.");
+      await fetchHardwareAndStatus();
       setTimeout(() => setStatusMessage(""), 4000);
     } catch (error) {
       console.error("Failed to delete model:", error);
@@ -273,8 +335,14 @@ export default function SettingsModule() {
     updatePomodoroSettings({ [field]: value });
   };
 
-  // Truthful, concise runtime state helper
+  // Truthful runtime readiness helper displayed strictly in the header badge
   const getRuntimeStatus = (): { label: string; pillClass: string } => {
+    if (!backendStatus.backendAvailable && backendStatus.executionDevice === "unavailable") {
+      if (isCloudReady) {
+        return { label: "Cloud ready", pillClass: "pill-violet" };
+      }
+      return { label: "Unavailable", pillClass: "pill-neutral" };
+    }
     if (isDownloading) {
       return { 
         label: `Downloading (${Math.round(aiDownloadProgress.percent || 0)}%)`, 
@@ -299,12 +367,6 @@ export default function SettingsModule() {
         pillClass: "pill-violet" 
       };
     }
-    if (hardwareStatus.executionDevice === "unavailable") {
-      return { 
-        label: "Unavailable", 
-        pillClass: "pill-neutral" 
-      };
-    }
     return { 
       label: "Not configured", 
       pillClass: "pill-neutral" 
@@ -314,17 +376,28 @@ export default function SettingsModule() {
   const runtimeInfo = getRuntimeStatus();
 
   const getAccelerationText = () => {
-    if (hardwareStatus.executionDevice === "detecting") {
+    if (backendStatus.executionDevice === "detecting") {
       return "Detecting...";
     }
-    if (hardwareStatus.executionDevice === "unavailable") {
+    if (!backendStatus.backendAvailable || backendStatus.executionDevice === "unavailable") {
       return "Unavailable";
     }
-    if (hardwareStatus.gpuAccelerated) {
-      const cleanGpu = hardwareStatus.gpuName.replace("NVIDIA GeForce ", "");
+    if (backendStatus.gpuAccelerated) {
+      const cleanGpu = backendStatus.gpuName.replace("NVIDIA GeForce ", "");
       return `CUDA · ${cleanGpu}`;
     }
-    return `CPU · ${hardwareStatus.cpuName}`;
+    return `CPU · ${backendStatus.cpuName}`;
+  };
+
+  const getModelDisplay = () => {
+    if (backendStatus.executionDevice === "detecting") {
+      return "Detecting...";
+    }
+    if (!backendStatus.backendAvailable) {
+      return "Unavailable (backend offline)";
+    }
+    const name = backendStatus.modelName || "Qwen 2.5 3B Instruct · Q4_K_M";
+    return name;
   };
 
   return (
@@ -397,35 +470,25 @@ export default function SettingsModule() {
               </span>
             </div>
 
-            {/* Row 1: Runtime */}
-            <div className="settings-row">
-              <div className="settings-row-left">
-                <span className="settings-row-label">
-                  Runtime
-                  <InfoTooltip content="Active inference backend handling natural language queries, reasoning, and context analysis." />
-                </span>
-              </div>
-              <div className="settings-row-right">
-                <span className={`settings-pill ${runtimeInfo.pillClass}`}>
-                  {runtimeInfo.label}
-                </span>
-              </div>
-            </div>
-
-            {/* Row 2: Model */}
+            {/* Row 1: Model (Redundant Runtime row removed) */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
                   Model
-                  <InfoTooltip content="Qwen 2.5 3B Instruct quantized to 4-bit Q4_K_M GGUF format for low-latency desktop inference." />
+                  <InfoTooltip content="Configured local neural network model selected based on host hardware capabilities. Quantized to 4-bit GGUF format for low-latency desktop inference." />
                 </span>
               </div>
               <div className="settings-row-right">
-                <span className="settings-value-text">Qwen 2.5 3B Instruct · Q4_K_M</span>
+                <span className="settings-value-text">{getModelDisplay()}</span>
+                {backendStatus.backendAvailable && (
+                  <span className="settings-tag-neutral">
+                    {isModelInstalled ? "Installed" : "Configured"}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Row 3: Acceleration */}
+            {/* Row 2: Acceleration */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
@@ -438,52 +501,54 @@ export default function SettingsModule() {
               </div>
             </div>
 
-            {/* Row 4: Storage */}
+            {/* Row 3: Storage */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
                   Storage
-                  <InfoTooltip content="Local disk allocation for standalone GGUF model weights on your machine." />
+                  <InfoTooltip content="Local disk space allocated for standalone GGUF model weights on your machine." />
                 </span>
               </div>
               <div className="settings-row-right">
                 <span className="settings-value-text">
-                  {isModelInstalled 
-                    ? `${aiModelSizeFormatted || "2.1 GB"} on disk`
+                  {!backendStatus.backendAvailable && backendStatus.executionDevice === "unavailable"
+                    ? "Unavailable"
+                    : isModelInstalled 
+                    ? `${backendStatus.modelSizeFormatted || aiModelSizeFormatted || "2.1 GB"} on disk`
                     : isDownloading
-                    ? `${(aiDownloadProgress.downloadedBytes / (1024 * 1024 * 1024)).toFixed(1)} / 2.1 GB`
-                    : "2.1 GB download"}
+                    ? `${(aiDownloadProgress.downloadedBytes / (1024 * 1024 * 1024)).toFixed(1)} / ${backendStatus.modelSizeFormatted || "2.1 GB"}`
+                    : `${backendStatus.modelSizeFormatted || "2.1 GB"} download (not installed)`}
                 </span>
               </div>
             </div>
 
-            {/* Row 5: Context */}
+            {/* Row 4: Context */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
                   Context
-                  <InfoTooltip content="Optimized working context token limit allocated for documents, tasks, instructions, and conversation history." />
+                  <InfoTooltip content="Configured working context window for in-process inference. Allocates memory for prompt tokens, workspace context, and conversation history." />
                 </span>
               </div>
               <div className="settings-row-right">
-                <span className="settings-value-text">2,048 tokens</span>
+                <span className="settings-value-text">2,048 tokens (configured)</span>
               </div>
             </div>
 
-            {/* Row 6: Embeddings */}
+            {/* Row 5: Embeddings */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
                   Embeddings
-                  <InfoTooltip content="Local dense vector model (BAAI/bge-small) providing fast semantic search across all personal documents." />
+                  <InfoTooltip content="In-process dense vector embedding model running locally via ONNX Runtime for semantic document search and conversational memory." />
                 </span>
               </div>
               <div className="settings-row-right">
-                <span className="settings-value-text">FastEmbed (bge-small)</span>
+                <span className="settings-value-text">FastEmbed · BAAI/bge-small</span>
               </div>
             </div>
 
-            {/* Row 7: Voice */}
+            {/* Row 6: Voice */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
@@ -496,7 +561,7 @@ export default function SettingsModule() {
               </div>
             </div>
 
-            {/* Row 8: Memory */}
+            {/* Row 7: Memory */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
@@ -506,9 +571,13 @@ export default function SettingsModule() {
               </div>
               <div className="settings-row-right">
                 <span className="settings-value-text" style={{ marginRight: "4px" }}>
-                  {isModelInstalled 
-                    ? (aiMemoryState?.isLoaded ? "Loaded · ~2.1 GB" : "Sleeping · 0 MB")
-                    : "Unloaded · 0 MB"}
+                  {!backendStatus.backendAvailable
+                    ? "Unavailable"
+                    : !isModelInstalled
+                    ? "Not installed · 0 MB"
+                    : aiMemoryState?.isLoaded 
+                    ? "Loaded · ~2.1 GB" 
+                    : "Sleeping · 0 MB"}
                 </span>
 
                 {isModelInstalled && (
@@ -549,7 +618,7 @@ export default function SettingsModule() {
               </div>
             </div>
 
-            {/* Row 9: Model Actions */}
+            {/* Row 8: Model Actions */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
@@ -596,7 +665,7 @@ export default function SettingsModule() {
                 ) : (
                   <>
                     <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-primary">
-                      <Download size={12} /> Download Model ({aiModelSizeFormatted || "2.1 GB"})
+                      <Download size={12} /> Download Model ({backendStatus.modelSizeFormatted || aiModelSizeFormatted || "2.1 GB"})
                     </button>
                     <button onClick={() => startAiModelDownload()} className="btn-orion-secondary">
                       Background
@@ -611,7 +680,7 @@ export default function SettingsModule() {
               <div className="settings-inline-alert">
                 <div className="alert-content">
                   <AlertTriangle size={14} />
-                  <span>Permanently delete local model weights (2.1 GB)? Offline reasoning will be disabled.</span>
+                  <span>Permanently delete local model weights ({backendStatus.modelSizeFormatted || "2.1 GB"})? Offline reasoning will be disabled.</span>
                 </div>
                 <div className="alert-actions">
                   <button
@@ -880,16 +949,16 @@ export default function SettingsModule() {
               </div>
             </div>
 
-            {/* Row 1: Data */}
+            {/* Row 1: Data (Audited real persistence) */}
             <div className="settings-row">
               <div className="settings-row-left">
                 <span className="settings-row-label">
                   Data
-                  <InfoTooltip content="Workspaces, tasks, flashcards, notes, and syllabus data are stored on your local disk with IndexedDB and SQLite." />
+                  <InfoTooltip content="Application state (tasks, modes, notes, preferences) is persisted in local browser storage. Document indexes and conversational memory are stored in a local vector store (Qdrant). Uploaded files remain in your local data directory." />
                 </span>
               </div>
               <div className="settings-row-right">
-                <span className="settings-value-text">Local IndexedDB & SQLite</span>
+                <span className="settings-value-text">Local browser storage & vector store</span>
               </div>
             </div>
 
