@@ -966,6 +966,8 @@ export const useOrionStore = create<OrionState>()(
           if (persistedState.activeMode && !validModes.includes(persistedState.activeMode)) {
             persistedState.activeMode = 'study';
           }
+          // Volatile runtime status must be queried fresh from backend, never restored as stale ready
+          persistedState.aiEngineStatus = 'checking';
         }
         return { ...currentState, ...persistedState };
       }

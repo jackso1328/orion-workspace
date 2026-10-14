@@ -70,16 +70,44 @@ fn check_api_credential(provider: &str) -> Result<bool, String> {
     Ok(false)
 }
 
+fn delete_service_credential(service: &str, provider: &str) -> Result<(), String> {
+    let entry = Entry::new(service, provider).map_err(|e| e.to_string())?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()), // Absent credential is an acceptable no-op
+        Err(e) => Err(format!("Keyring error on {}: {}", service, e)),
+    }
+}
+
 #[tauri::command]
 fn remove_api_credential(provider: &str) -> Result<(), String> {
-    // Remove from canonical service
+    let mut errors: Vec<String> = Vec::new();
+
+    // 1. Remove from canonical service
+    if let Err(e) = delete_service_credential(CANONICAL_SERVICE, provider) {
+        errors.push(e);
+    }
+    // 2. Remove from legacy service
+    if let Err(e) = delete_service_credential(LEGACY_SERVICE, provider) {
+        errors.push(e);
+    }
+
+    if !errors.is_empty() {
+        return Err(errors.join("; "));
+    }
+
+    // 3. Confirm absent from both services
     if let Ok(entry) = Entry::new(CANONICAL_SERVICE, provider) {
-        let _ = entry.delete_credential();
+        if entry.get_password().is_ok() {
+            return Err("Credential still present in canonical store after deletion attempt".to_string());
+        }
     }
-    // Also remove from legacy service if present
     if let Ok(legacy_entry) = Entry::new(LEGACY_SERVICE, provider) {
-        let _ = legacy_entry.delete_credential();
+        if legacy_entry.get_password().is_ok() {
+            return Err("Credential still present in legacy store after deletion attempt".to_string());
+        }
     }
+
     Ok(())
 }
 
@@ -96,3 +124,73 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+
+    #[test]
+    fn test_native_keyring_lifecycle() {
+        let provider = "orion_interop_test";
+        let secret = "test_val_dummy_key_98765";
+
+        // Clean start
+        let _ = remove_api_credential(provider);
+        assert_eq!(check_api_credential(provider).unwrap(), false);
+
+        // 1. Write via Tauri command
+        assert!(save_api_credential(provider, secret).is_ok());
+        assert_eq!(check_api_credential(provider).unwrap(), true);
+
+        // 2. Python backend retrieval check via get_keyring_credential
+        let python_path = r"C:\Users\proud\ORION\.venv\Scripts\python.exe";
+        let py_script = r#"
+import sys
+sys.path.insert(0, r'C:\Users\proud\ORION')
+from backend.llm import get_keyring_credential
+val = get_keyring_credential('orion_interop_test')
+if val == 'test_val_dummy_key_98765':
+    sys.exit(0)
+else:
+    sys.exit(1)
+"#;
+        let py_check = Command::new(python_path)
+            .args(["-c", py_script])
+            .output();
+
+        let py_read_success = match py_check {
+            Ok(ref output) => output.status.success(),
+            Err(_) => false,
+        };
+
+        // 3. Remove via Tauri command
+        assert!(remove_api_credential(provider).is_ok());
+        assert_eq!(check_api_credential(provider).unwrap(), false);
+
+        // 4. Verify Python backend can no longer retrieve it
+        let py_verify_absent_script = r#"
+import sys
+sys.path.insert(0, r'C:\Users\proud\ORION')
+from backend.llm import get_keyring_credential
+val = get_keyring_credential('orion_interop_test')
+if val is None:
+    sys.exit(0)
+else:
+    sys.exit(1)
+"#;
+        let py_absent_check = Command::new(python_path)
+            .args(["-c", py_verify_absent_script])
+            .output();
+
+        let py_absent_success = match py_absent_check {
+            Ok(output) => output.status.success(),
+            Err(_) => false,
+        };
+
+        assert!(py_read_success, "Python backend should retrieve credential saved by Rust Tauri command");
+        assert!(py_absent_success, "Python backend should see None after removal by Rust Tauri command");
+    }
+}
+
+

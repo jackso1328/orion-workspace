@@ -17,6 +17,7 @@ import time
 import json
 import logging
 import threading
+from enum import Enum
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any
 
@@ -150,6 +151,54 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 
+class MigrationResult(str, Enum):
+    COMPLETED = "completed"                  # Canonical write verified and legacy entry removed
+    CLEANUP_INCOMPLETE = "cleanup_incomplete"  # Canonical write verified, but legacy deletion failed
+    FAILED = "failed"                        # Write or verification failed; legacy entry preserved
+    NO_LEGACY_KEY = "no_legacy_key"          # No legacy entry existed
+
+
+def _read_win32_credential(service: str, provider: str) -> Optional[str]:
+    """Helper to read Windows Credential Manager generic credential written by native Tauri."""
+    try:
+        import win32cred
+        target = f"{provider}.{service}"
+        cred = win32cred.CredRead(target, win32cred.CRED_TYPE_GENERIC)
+        if cred and cred.get('CredentialBlob'):
+            blob = cred['CredentialBlob']
+            for enc in ('utf-16-le', 'utf-8'):
+                try:
+                    val = blob.decode(enc).strip()
+                    if val:
+                        return val
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return None
+
+
+def _delete_win32_credential(service: str, provider: str) -> bool:
+    """Helper to delete Windows Credential Manager generic credential written by native Tauri."""
+    try:
+        import win32cred
+        target = f"{provider}.{service}"
+        try:
+            win32cred.CredDelete(target, win32cred.CRED_TYPE_GENERIC)
+        except Exception as e:
+            if getattr(e, 'winerror', None) != 1168:
+                return False
+        try:
+            cred = win32cred.CredRead(target, win32cred.CRED_TYPE_GENERIC)
+            if cred is not None:
+                return False
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return True
+
+
 def get_keyring_credential(provider: str) -> Optional[str]:
     """
     Safely retrieve API credential for provider from OS Keyring.
@@ -172,29 +221,22 @@ def get_keyring_credential(provider: str) -> Optional[str]:
         except Exception as e:
             logger.debug("Canonical keyring lookup failed for %s: %s", provider, type(e).__name__)
 
+        # Native OS keyring target lookup (written by Tauri)
+        win_key = _read_win32_credential(CANONICAL_KEYRING_SERVICE, provider)
+        if win_key:
+            return win_key
+
         # 2. Legacy service fallback + non-destructive verified migration
         try:
             legacy_key = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
+            if not legacy_key or not legacy_key.strip():
+                legacy_key = _read_win32_credential(LEGACY_KEYRING_SERVICE, provider)
             if legacy_key and legacy_key.strip():
                 clean_legacy = legacy_key.strip()
-                migrated = False
-                try:
-                    keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, clean_legacy)
-                    # Verify canonical credential is present and matches
-                    verified = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
-                    if verified and verified.strip() == clean_legacy:
-                        migrated = True
-                except Exception as write_err:
-                    logger.debug("Failed writing canonical credential during migration: %s", type(write_err).__name__)
-
-                if migrated:
-                    try:
-                        keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
-                    except Exception as del_err:
-                        logger.debug("Could not remove legacy key after verified migration: %s", type(del_err).__name__)
-
-                # Return the valid credential regardless of whether legacy deletion succeeded,
-                # but legacy was NOT deleted if canonical write/verification failed!
+                # Attempt safe migration
+                res = migrate_legacy_credential(provider)
+                if res in (MigrationResult.COMPLETED, MigrationResult.CLEANUP_INCOMPLETE):
+                    logger.debug("Keyring migration status for %s: %s", provider, res.value)
                 return clean_legacy
         except Exception as e:
             logger.debug("Legacy keyring lookup failed for %s: %s", provider, type(e).__name__)
@@ -203,45 +245,88 @@ def get_keyring_credential(provider: str) -> Optional[str]:
     return None
 
 
-def migrate_legacy_credential(provider: str) -> bool:
+def migrate_legacy_credential(provider: str) -> MigrationResult:
     """
     Attempt safe, non-destructive migration of provider credential from legacy to canonical service.
-    Returns True ONLY if canonical write was verified and legacy key was deleted.
-    Returns False if legacy key doesn't exist, canonical write fails, or verification fails.
-    Preserves legacy entry on any write or verification failure.
+    Returns structured MigrationResult:
+      - MigrationResult.COMPLETED: Canonical write verified and legacy entry removed.
+      - MigrationResult.CLEANUP_INCOMPLETE: Canonical write verified, but legacy deletion failed.
+      - MigrationResult.FAILED: Canonical write or verification failed; legacy entry preserved.
+      - MigrationResult.NO_LEGACY_KEY: No legacy entry existed.
+    Never deletes legacy entry before canonical write is verified.
     Never exposes or logs secrets.
     """
     try:
         import keyring
-        legacy_key = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
+        try:
+            legacy_key = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
+            if not legacy_key or not legacy_key.strip():
+                legacy_key = _read_win32_credential(LEGACY_KEYRING_SERVICE, provider)
+        except Exception as e:
+            logger.debug("Legacy read error for %s: %s", provider, type(e).__name__)
+            return MigrationResult.FAILED
+
         if not legacy_key or not legacy_key.strip():
-            return False
+            return MigrationResult.NO_LEGACY_KEY
+
         clean = legacy_key.strip()
 
+        # Step 1: Write to canonical service
         try:
             keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, clean)
+            try:
+                import win32cred
+                win32cred.CredWrite({
+                    'Type': win32cred.CRED_TYPE_GENERIC,
+                    'TargetName': f"{provider}.{CANONICAL_KEYRING_SERVICE}",
+                    'UserName': provider,
+                    'CredentialBlob': clean.encode('utf-16-le'),
+                    'Persist': win32cred.CRED_PERSIST_LOCAL_MACHINE,
+                }, 0)
+            except Exception:
+                pass
         except Exception as e:
-            logger.debug("Canonical write failed during migration: %s", type(e).__name__)
-            return False
+            logger.debug("Canonical write failed during migration for %s: %s", provider, type(e).__name__)
+            return MigrationResult.FAILED
 
+        # Step 2: Verify canonical write matches
         try:
             verified = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
             if not verified or verified.strip() != clean:
-                logger.debug("Canonical verification failed during migration")
-                return False
+                verified = _read_win32_credential(CANONICAL_KEYRING_SERVICE, provider)
+            if not verified or verified.strip() != clean:
+                logger.debug("Canonical verification failed during migration for %s", provider)
+                return MigrationResult.FAILED
         except Exception as e:
-            logger.debug("Canonical verify lookup failed: %s", type(e).__name__)
-            return False
+            logger.debug("Canonical verify lookup failed for %s: %s", provider, type(e).__name__)
+            return MigrationResult.FAILED
 
+        # Step 3: Delete legacy only after canonical write has been verified
+        legacy_deleted = True
         try:
             keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
+            # Verify legacy deletion
+            try:
+                check_legacy = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
+                if check_legacy is not None:
+                    legacy_deleted = False
+            except Exception:
+                pass
         except Exception as e:
-            logger.debug("Legacy deletion notice: %s", type(e).__name__)
+            logger.warning("Could not delete legacy key during migration for %s: %s", provider, type(e).__name__)
+            legacy_deleted = False
 
-        return True
+        if not _delete_win32_credential(LEGACY_KEYRING_SERVICE, provider):
+            legacy_deleted = False
+
+        if not legacy_deleted:
+            logger.warning("Legacy key deletion incomplete for %s", provider)
+            return MigrationResult.CLEANUP_INCOMPLETE
+
+        return MigrationResult.COMPLETED
     except Exception as e:
-        logger.debug("Migration failed: %s", type(e).__name__)
-        return False
+        logger.debug("Migration failed unexpectedly for %s: %s", provider, type(e).__name__)
+        return MigrationResult.FAILED
 
 
 def set_keyring_credential(provider: str, secret: str) -> bool:
@@ -258,10 +343,25 @@ def set_keyring_credential(provider: str, secret: str) -> bool:
         verified = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
         if not verified or verified.strip() != clean:
             return False
+
+        # Native OS target sync
+        try:
+            import win32cred
+            win32cred.CredWrite({
+                'Type': win32cred.CRED_TYPE_GENERIC,
+                'TargetName': f"{provider}.{CANONICAL_KEYRING_SERVICE}",
+                'UserName': provider,
+                'CredentialBlob': clean.encode('utf-16-le'),
+                'Persist': win32cred.CRED_PERSIST_LOCAL_MACHINE,
+            }, 0)
+        except Exception:
+            pass
+
         try:
             keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
         except Exception:
             pass
+        _delete_win32_credential(LEGACY_KEYRING_SERVICE, provider)
         return True
     except Exception as e:
         logger.debug("Keyring write error: %s", type(e).__name__)
@@ -271,19 +371,47 @@ def set_keyring_credential(provider: str, secret: str) -> bool:
 def delete_keyring_credential(provider: str) -> bool:
     """
     Remove provider credential from both canonical and legacy services.
-    Returns True if attempted safely.
+    - Treats absent credentials as an acceptable no-op.
+    - Surfaces genuine deletion failures as False without exposing secrets.
+    - Reports success (True) only when confirmed absent from both services.
+    Never exposes or logs secrets.
     """
     try:
         import keyring
-        for service in (CANONICAL_KEYRING_SERVICE, LEGACY_KEYRING_SERVICE):
-            try:
-                keyring.delete_password(service, provider)
-            except Exception:
-                pass
-        return True
+        import keyring.errors
     except Exception as e:
-        logger.debug("Keyring delete error: %s", type(e).__name__)
+        logger.error("Keyring module unavailable for deletion: %s", type(e).__name__)
         return False
+
+    for service in (CANONICAL_KEYRING_SERVICE, LEGACY_KEYRING_SERVICE):
+        try:
+            # Check if currently present
+            current = keyring.get_password(service, provider)
+            if current is not None:
+                try:
+                    keyring.delete_password(service, provider)
+                except (keyring.errors.PasswordDeleteError, keyring.errors.KeyringError) as del_err:
+                    logger.debug("Keyring deletion error for %s in %s: %s", provider, service, type(del_err).__name__)
+                except Exception as e:
+                    logger.error("Unexpected error deleting from %s: %s", service, type(e).__name__)
+
+                # Verify entry is now confirmed absent
+                try:
+                    remaining = keyring.get_password(service, provider)
+                    if remaining is not None:
+                        logger.error("Credential for %s still present in %s after removal attempt", provider, service)
+                        return False
+                except Exception as verify_err:
+                    logger.error("Failed to verify removal from %s: %s", service, type(verify_err).__name__)
+                    return False
+        except Exception as e:
+            logger.error("Error accessing %s during removal for %s: %s", service, provider, type(e).__name__)
+            return False
+
+        if not _delete_win32_credential(service, provider):
+            return False
+
+    return True
 
 
 def get_cloud_credentials(target_provider: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:

@@ -189,8 +189,6 @@ export default function SettingsModule() {
   const isModelInstalled = backendStatus.backendAvailable ? backendStatus.modelExists : false;
   const isDownloading = aiEngineStatus === "downloading" || (aiDownloadProgress.status === "downloading" && !isModelInstalled);
   const isPaused = aiEngineStatus === "paused" || (aiDownloadProgress.status === "paused" && !isModelInstalled);
-  const isLocalReady = backendStatus.backendAvailable && isModelInstalled && !isDownloading && !isPaused;
-  const isCloudReady = aiEngineStatus === "cloud_ready";
 
   useEffect(() => {
     checkCredentialStatus(provider);
@@ -309,8 +307,10 @@ export default function SettingsModule() {
       await checkAiSystemStatus();
       await fetchHardwareAndStatus();
       setTimeout(() => setStatusMessage(""), 4000);
-    } catch {
-      setStatusMessage("Error removing credential.");
+    } catch (err) {
+      console.error("Failed to remove credential:", err);
+      setStatusMessage(`Failed to remove credential for ${formatProviderName(provider)}. Please check OS Keychain permissions.`);
+      setTimeout(() => setStatusMessage(""), 4000);
     }
   };
 
@@ -361,53 +361,40 @@ export default function SettingsModule() {
 
   // Truthful runtime readiness helper displayed strictly in the header badge
   const getRuntimeStatus = (): { label: string; pillClass: string } => {
+    // 1. Backend unavailable or unreachable -> strictly Unavailable
     if (!backendStatus.backendAvailable) {
       return { label: "Unavailable", pillClass: "pill-neutral" };
     }
+    // 2. Active downloads
     if (isDownloading) {
       return { 
         label: `Downloading (${Math.round(aiDownloadProgress.percent || 0)}%)`, 
         pillClass: "pill-blue" 
       };
     }
+    // 3. Paused downloads
     if (isPaused) {
       return { 
         label: `Paused (${Math.round(aiDownloadProgress.percent || 0)}%)`, 
         pillClass: "pill-amber" 
       };
     }
-    // Single source of truth: backend status response whenever backend is available
-    if (backendStatus.backendAvailable) {
-      if (backendStatus.engine === "cloud") {
-        const activeProv = backendStatus.cloudProvider || provider;
-        return { 
-          label: `Cloud active (${formatProviderName(activeProv)})`, 
-          pillClass: "pill-violet" 
-        };
-      }
-      if (backendStatus.engine === "local") {
-        return { 
-          label: "Local ready", 
-          pillClass: "pill-green" 
-        };
-      }
+    // 4. Backend status available and cloud engine selected
+    if (backendStatus.engine === "cloud") {
+      const activeProv = backendStatus.cloudProvider || provider;
       return { 
-        label: "Not configured", 
-        pillClass: "pill-neutral" 
-      };
-    }
-    if (isCloudReady) {
-      return { 
-        label: `Cloud ready (${formatProviderName(provider)})`, 
+        label: `Cloud active (${formatProviderName(activeProv)})`, 
         pillClass: "pill-violet" 
       };
     }
-    if (isLocalReady) {
+    // 5. Backend status available and local engine selected
+    if (backendStatus.engine === "local") {
       return { 
         label: "Local ready", 
         pillClass: "pill-green" 
       };
     }
+    // 6. Backend status available with neither usable configuration
     return { 
       label: "Not configured", 
       pillClass: "pill-neutral" 
