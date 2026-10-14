@@ -9,3 +9,4 @@ keyring
 duckduckgo-search
 llama-cpp-python
 websockets
+pywin32>=306; sys_platform == 'win32'

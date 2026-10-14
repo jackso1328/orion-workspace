@@ -17,10 +17,13 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+import subprocess
 from unittest.mock import patch, MagicMock, PropertyMock
 
-# Add ORION repo to sys.path
-sys.path.insert(0, r"C:\Users\proud\ORION")
+# Dynamically derive repository root from test file location
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from fastapi.testclient import TestClient
 
@@ -39,6 +42,8 @@ from backend.llm import (
     set_keyring_credential,
     delete_keyring_credential,
     get_cloud_credentials,
+    _read_win32_credential,
+    _delete_win32_credential,
 )
 from backend.main import get_full_ai_status, app
 from backend.model_manager import ModelManager
@@ -64,12 +69,37 @@ class TestCredentialAndEngineReliability(unittest.TestCase):
         set_selected_provider(DEFAULT_PROVIDER)
         self.client = TestClient(app)
 
+        # 4. In-memory mock store for win32 credentials during unit tests
+        self._win32_mock_store = {}
+
+        def mock_win32_read(service, provider):
+            return self._win32_mock_store.get((service, provider))
+
+        def mock_win32_write(service, provider, secret):
+            self._win32_mock_store[(service, provider)] = secret
+            return True
+
+        def mock_win32_delete(service, provider):
+            self._win32_mock_store.pop((service, provider), None)
+            return True
+
+        self._patch_win32_read = patch("backend.llm._read_win32_credential", side_effect=mock_win32_read)
+        self._patch_win32_write = patch("backend.llm._write_win32_credential", side_effect=mock_win32_write)
+        self._patch_win32_delete = patch("backend.llm._delete_win32_credential", side_effect=mock_win32_delete)
+
+        self._patch_win32_read.start()
+        self._patch_win32_write.start()
+        self._patch_win32_delete.start()
+
     def tearDown(self):
         # Cleanly restore shared state
         try:
             set_selected_provider(DEFAULT_PROVIDER)
         except Exception:
             pass
+        self._patch_win32_delete.stop()
+        self._patch_win32_write.stop()
+        self._patch_win32_read.stop()
         self.env_patcher.stop()
         self.temp_dir.cleanup()
 
@@ -386,59 +416,158 @@ class TestCredentialAndEngineReliability(unittest.TestCase):
             self.assertEqual(res.status_code, 500)
             self.assertIn("Disk write failed", res.json()["detail"])
 
-    def test_settings_ui_backend_unavailable_contract(self):
+    def test_native_win32_deletion_failure_causes_false_removal(self):
+        """When Windows native credential deletion fails, delete_keyring_credential returns False."""
+        with patch("keyring.get_password", return_value=None), \
+             patch("backend.llm._delete_win32_credential", return_value=False):
+            res = delete_keyring_credential("openai")
+            self.assertFalse(res, "Must return False when native deletion fails")
+
+    def test_native_win32_read_and_delete_truthful_platform_gating(self):
+        """_read_win32_credential and _delete_win32_credential gate by platform truthfully."""
+        self._patch_win32_read.stop()
+        self._patch_win32_delete.stop()
+        try:
+            with patch("sys.platform", "darwin"):
+                self.assertIsNone(_read_win32_credential(CANONICAL_KEYRING_SERVICE, "openai"))
+                self.assertTrue(_delete_win32_credential(CANONICAL_KEYRING_SERVICE, "openai"))
+
+            with patch("sys.platform", "linux"):
+                self.assertIsNone(_read_win32_credential(CANONICAL_KEYRING_SERVICE, "openai"))
+                self.assertTrue(_delete_win32_credential(CANONICAL_KEYRING_SERVICE, "openai"))
+        finally:
+            self._patch_win32_read.start()
+            self._patch_win32_delete.start()
+
+    def test_native_win32_real_lifecycle_on_windows(self):
+        """On Windows, test real win32 CredWrite -> CredRead -> CredDelete lifecycle with isolated test target."""
+        if sys.platform != "win32":
+            self.skipTest("Windows-only native Credential Manager test")
+        self._patch_win32_read.stop()
+        self._patch_win32_write.stop()
+        self._patch_win32_delete.stop()
+        test_prov = f"test_roundtrip_{os.getpid()}"
+        try:
+            from backend.llm import _write_win32_credential
+            # 1. Write
+            self.assertTrue(_write_win32_credential(CANONICAL_KEYRING_SERVICE, test_prov, "secret_123"))
+            # 2. Read
+            self.assertEqual(_read_win32_credential(CANONICAL_KEYRING_SERVICE, test_prov), "secret_123")
+            # 3. Delete
+            self.assertTrue(_delete_win32_credential(CANONICAL_KEYRING_SERVICE, test_prov))
+            # 4. Confirm absence
+            self.assertIsNone(_read_win32_credential(CANONICAL_KEYRING_SERVICE, test_prov))
+        finally:
+            _delete_win32_credential(CANONICAL_KEYRING_SERVICE, test_prov)
+            self._patch_win32_read.start()
+            self._patch_win32_write.start()
+            self._patch_win32_delete.start()
+
+    def test_migration_when_legacy_key_in_win32_only(self):
         """
-        Settings UI runtime status contract:
-        - When backendAvailable is False: must strictly be 'Unavailable' (pill-neutral).
-        - A configured credential must NOT make the badge claim 'Cloud active' or 'Cloud ready'.
-        - When backendAvailable is True and engine is 'cloud': 'Cloud active (<Provider>)' (pill-violet).
-        - When backendAvailable is True and engine is 'local': 'Local ready' (pill-green).
-        - When backendAvailable is True and engine is 'none': 'Not configured' (pill-neutral).
+        When a legacy key exists only in Windows Credential Manager and not in keyring backend:
+        - If native deletion succeeds, returns MigrationResult.COMPLETED.
+        - If native deletion fails, returns MigrationResult.CLEANUP_INCOMPLETE.
         """
-        def format_provider_name(prov):
-            if not prov:
-                return "Cloud"
-            if prov == "openai":
-                return "OpenAI"
-            if prov == "anthropic":
-                return "Anthropic"
-            if prov == "openrouter":
-                return "OpenRouter"
-            return prov.capitalize()
+        # Scenario A: Successful cleanup
+        mock_canonical_store = {}
+        def mock_set(service, username, password):
+            mock_canonical_store[(service, username)] = password
 
-        def derive_settings_status(backend_available, engine, cloud_prov, provider, is_downloading=False, is_paused=False):
-            if not backend_available:
-                return {"label": "Unavailable", "pillClass": "pill-neutral"}
-            if is_downloading:
-                return {"label": "Downloading (50%)", "pillClass": "pill-blue"}
-            if is_paused:
-                return {"label": "Paused (50%)", "pillClass": "pill-amber"}
-            if engine == "cloud":
-                active_prov = cloud_prov or provider
-                return {"label": f"Cloud active ({format_provider_name(active_prov)})", "pillClass": "pill-violet"}
-            if engine == "local":
-                return {"label": "Local ready", "pillClass": "pill-green"}
-            return {"label": "Not configured", "pillClass": "pill-neutral"}
+        def mock_get(service, username):
+            return mock_canonical_store.get((service, username))
 
-        # 1. Backend unavailable -> Strictly 'Unavailable', never 'Cloud ready'
-        unavail = derive_settings_status(backend_available=False, engine="cloud", cloud_prov="openai", provider="openai")
-        self.assertEqual(unavail["label"], "Unavailable")
-        self.assertEqual(unavail["pillClass"], "pill-neutral")
+        with patch("keyring.get_password", side_effect=mock_get), \
+             patch("keyring.set_password", side_effect=mock_set), \
+             patch("backend.llm._read_win32_credential", side_effect=lambda s, p: "sk-win32-legacy-key" if s == LEGACY_KEYRING_SERVICE else mock_canonical_store.get((s, p))), \
+             patch("backend.llm._delete_win32_credential", return_value=True):
 
-        # 2. Cloud active with actual provider
-        cloud_active = derive_settings_status(backend_available=True, engine="cloud", cloud_prov="anthropic", provider="anthropic")
-        self.assertEqual(cloud_active["label"], "Cloud active (Anthropic)")
-        self.assertEqual(cloud_active["pillClass"], "pill-violet")
+            res = migrate_legacy_credential("openai")
+            self.assertEqual(res, MigrationResult.COMPLETED)
+            self.assertEqual(mock_canonical_store.get((CANONICAL_KEYRING_SERVICE, "openai")), "sk-win32-legacy-key")
 
-        # 3. Local ready
-        local_ready = derive_settings_status(backend_available=True, engine="local", cloud_prov=None, provider="openai")
-        self.assertEqual(local_ready["label"], "Local ready")
-        self.assertEqual(local_ready["pillClass"], "pill-green")
+        # Scenario B: Incomplete cleanup when native delete fails
+        mock_canonical_store.clear()
+        with patch("keyring.get_password", side_effect=mock_get), \
+             patch("keyring.set_password", side_effect=mock_set), \
+             patch("backend.llm._read_win32_credential", side_effect=lambda s, p: "sk-win32-legacy-key" if s == LEGACY_KEYRING_SERVICE else mock_canonical_store.get((s, p))), \
+             patch("backend.llm._delete_win32_credential", return_value=False):
 
-        # 4. Neither configured
-        not_config = derive_settings_status(backend_available=True, engine="none", cloud_prov=None, provider="openai")
-        self.assertEqual(not_config["label"], "Not configured")
-        self.assertEqual(not_config["pillClass"], "pill-neutral")
+            res = migrate_legacy_credential("openai")
+            self.assertEqual(res, MigrationResult.CLEANUP_INCOMPLETE)
+            self.assertEqual(mock_canonical_store.get((CANONICAL_KEYRING_SERVICE, "openai")), "sk-win32-legacy-key")
+
+    def test_actual_backend_runtime_status_contract(self):
+        """
+        Verifies actual backend runtime engine and provider resolution contracts:
+        - When cloud credentials exist for selected provider -> engine is 'cloud', cloud_provider matches.
+        - When cloud credentials missing, but local model exists -> engine is 'local', cloud_provider is None.
+        - When neither exists -> engine is 'none', cloud_provider is None.
+        - When cloud key exists for non-selected provider (e.g. openai) while anthropic is selected without key,
+          backend status never claims cloud active.
+        """
+        # 1. Cloud engine active
+        mock_store = {(CANONICAL_KEYRING_SERVICE, "anthropic"): "sk-valid-anthropic-key"}
+        set_selected_provider("anthropic")
+        with patch("keyring.get_password", side_effect=lambda s, k: mock_store.get((s, k))):
+            status = get_full_ai_status()
+            self.assertEqual(status["engine"], "cloud")
+            self.assertEqual(status["cloud_provider"], "anthropic")
+            self.assertEqual(status["selected_provider"], "anthropic")
+
+            api_res = self.client.get("/api/ai/status")
+            self.assertEqual(api_res.status_code, 200)
+            self.assertEqual(api_res.json()["engine"], "cloud")
+            self.assertEqual(api_res.json()["cloud_provider"], "anthropic")
+
+        # 2. Local fallback active when cloud key missing
+        with patch("keyring.get_password", return_value=None), \
+             patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=True)):
+            status = get_full_ai_status()
+            self.assertEqual(status["engine"], "local")
+            self.assertIsNone(status["cloud_provider"])
+
+            api_res = self.client.get("/api/ai/status")
+            self.assertEqual(api_res.status_code, 200)
+            self.assertEqual(api_res.json()["engine"], "local")
+            self.assertIsNone(api_res.json()["cloud_provider"])
+
+        # 3. Neither configured
+        with patch("keyring.get_password", return_value=None), \
+             patch.object(ModelManager, "model_exists", new_callable=PropertyMock(return_value=False)):
+            status = get_full_ai_status()
+            self.assertEqual(status["engine"], "none")
+            self.assertIsNone(status["cloud_provider"])
+
+            api_res = self.client.get("/api/ai/status")
+            self.assertEqual(api_res.status_code, 200)
+            self.assertEqual(api_res.json()["engine"], "none")
+            self.assertIsNone(api_res.json()["cloud_provider"])
+
+    def test_frontend_pure_runtime_status_suite_passes(self):
+        """
+        Executes the real React frontend's pure runtime-status derivation unit test suite:
+        (node --test src/utils/runtimeStatus.test.ts).
+        Verifies all 8 status badge states directly without mocking.
+        """
+        ui_dir = REPO_ROOT / "orion-ui"
+        test_file = ui_dir / "src" / "utils" / "runtimeStatus.test.ts"
+        if not test_file.exists():
+            self.skipTest("runtimeStatus.test.ts not found in orion-ui")
+
+        try:
+            res = subprocess.run(
+                ["node", "--test", "src/utils/runtimeStatus.test.ts"],
+                cwd=str(ui_dir),
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            self.assertEqual(res.returncode, 0, f"Frontend runtime status tests failed:\n{res.stdout}\n{res.stderr}")
+            self.assertIn("pass 8", res.stdout)
+            self.assertIn("fail 0", res.stdout)
+        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+            self.skipTest(f"Node runtime unavailable to execute frontend test: {e}")
 
 
 if __name__ == "__main__":

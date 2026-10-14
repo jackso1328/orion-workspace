@@ -159,44 +159,132 @@ class MigrationResult(str, Enum):
 
 
 def _read_win32_credential(service: str, provider: str) -> Optional[str]:
-    """Helper to read Windows Credential Manager generic credential written by native Tauri."""
+    """
+    Helper to read Windows Credential Manager generic credential written by native Tauri.
+    Platform-gated: Returns None immediately on non-Windows.
+    Never logs or exposes credential values.
+    """
+    if sys.platform != "win32":
+        return None
     try:
         import win32cred
-        target = f"{provider}.{service}"
+        import pywintypes
+    except ImportError as e:
+        logger.warning("pywin32 unavailable on Windows; cannot read native credential: %s", type(e).__name__)
+        return None
+
+    target = f"{provider}.{service}"
+    try:
         cred = win32cred.CredRead(target, win32cred.CRED_TYPE_GENERIC)
         if cred and cred.get('CredentialBlob'):
             blob = cred['CredentialBlob']
-            for enc in ('utf-16-le', 'utf-8'):
-                try:
-                    val = blob.decode(enc).strip()
-                    if val:
-                        return val
-                except Exception:
-                    pass
-    except Exception:
-        pass
+            if isinstance(blob, bytes):
+                for enc in ('utf-16-le', 'utf-8'):
+                    try:
+                        val = blob.decode(enc).strip()
+                        if val:
+                            return val
+                    except (UnicodeDecodeError, ValueError):
+                        pass
+            elif isinstance(blob, str) and blob.strip():
+                return blob.strip()
+    except pywintypes.error as e:
+        # 1168 = ERROR_NOT_FOUND (acceptable missing credential)
+        if e.winerror != 1168:
+            logger.error("OS error reading native credential for %s in %s: %s (code %s)", provider, service, e.funcname, e.winerror)
+    except Exception as e:
+        logger.error("Unexpected error reading native credential for %s in %s: %s", provider, service, type(e).__name__)
     return None
 
 
 def _delete_win32_credential(service: str, provider: str) -> bool:
-    """Helper to delete Windows Credential Manager generic credential written by native Tauri."""
+    """
+    Helper to delete Windows Credential Manager generic credential written by native Tauri.
+    - On non-Windows platforms, returns True (deliberately skipped).
+    - On Windows, if pywin32 is missing, returns False (safe failure).
+    - Returns True only when absence has been genuinely confirmed.
+    - Treats ERROR_NOT_FOUND (1168) as an acceptable no-op.
+    - Never exposes or logs credential values.
+    """
+    if sys.platform != "win32":
+        return True
+
     try:
         import win32cred
-        target = f"{provider}.{service}"
-        try:
-            win32cred.CredDelete(target, win32cred.CRED_TYPE_GENERIC)
-        except Exception as e:
-            if getattr(e, 'winerror', None) != 1168:
-                return False
-        try:
-            cred = win32cred.CredRead(target, win32cred.CRED_TYPE_GENERIC)
-            if cred is not None:
-                return False
-        except Exception:
-            pass
+        import pywintypes
+    except ImportError as e:
+        logger.error("pywin32 dependency is unavailable on Windows; cannot remove native credential: %s", type(e).__name__)
+        return False
+
+    target = f"{provider}.{service}"
+
+    # 1. Attempt deletion
+    try:
+        win32cred.CredDelete(target, win32cred.CRED_TYPE_GENERIC)
+    except pywintypes.error as e:
+        # Error 1168 is ERROR_NOT_FOUND (not present - acceptable no-op)
+        if e.winerror != 1168:
+            logger.error("OS error deleting native credential for %s in %s: %s (code %s)", provider, service, e.funcname, e.winerror)
+            return False
+    except Exception as e:
+        logger.error("Unexpected error deleting native credential for %s in %s: %s", provider, service, type(e).__name__)
+        return False
+
+    # 2. Verify absence
+    try:
+        cred = win32cred.CredRead(target, win32cred.CRED_TYPE_GENERIC)
+        if cred is not None:
+            logger.error("Native credential for %s still present in %s after removal attempt", provider, service)
+            return False
+    except pywintypes.error as e:
+        if e.winerror == 1168:
+            return True  # Confirmed absent
+        logger.error("Failed to verify native credential removal for %s in %s: %s (code %s)", provider, service, e.funcname, e.winerror)
+        return False
+    except Exception as e:
+        logger.error("Unexpected verification error for native credential %s in %s: %s", provider, service, type(e).__name__)
+        return False
+
+    return True
+
+
+def _write_win32_credential(service: str, provider: str, secret: str) -> bool:
+    """
+    Helper to write Windows Credential Manager generic credential for native Tauri interoperability.
+    Tauri keyring crate expects target format '{provider}.{service}'.
+    - On non-Windows platforms, returns True (deliberately skipped).
+    - On Windows, if pywin32 is missing, returns False (safe failure).
+    - Writes secret and verifies write.
+    - Never exposes or logs credential values.
+    """
+    if sys.platform != "win32":
         return True
-    except Exception:
+
+    clean = (secret or "").strip()
+    if not clean:
+        return False
+
+    try:
+        import win32cred
+        import pywintypes
+    except ImportError as e:
+        logger.error("pywin32 dependency is unavailable on Windows; cannot write native credential: %s", type(e).__name__)
+        return False
+
+    target = f"{provider}.{service}"
+    try:
+        # pywin32 CredWrite accepts str for CredentialBlob and encodes it as UTF-16LE in Windows Credential Manager
+        win32cred.CredWrite({
+            'Type': win32cred.CRED_TYPE_GENERIC,
+            'TargetName': target,
+            'UserName': provider,
+            'CredentialBlob': clean,
+            'Persist': win32cred.CRED_PERSIST_LOCAL_MACHINE,
+        }, 0)
         return True
+    except Exception as e:
+        logger.error("Failed to write native credential for %s in %s: %s", provider, service, type(e).__name__)
+        return False
 
 
 def get_keyring_credential(provider: str) -> Optional[str]:
@@ -258,15 +346,16 @@ def migrate_legacy_credential(provider: str) -> MigrationResult:
     """
     try:
         import keyring
+        legacy_keyring_val = None
         try:
-            legacy_key = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
-            if not legacy_key or not legacy_key.strip():
-                legacy_key = _read_win32_credential(LEGACY_KEYRING_SERVICE, provider)
+            legacy_keyring_val = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
         except Exception as e:
-            logger.debug("Legacy read error for %s: %s", provider, type(e).__name__)
-            return MigrationResult.FAILED
+            logger.debug("Legacy keyring read error for %s: %s", provider, type(e).__name__)
 
-        if not legacy_key or not legacy_key.strip():
+        legacy_win32_val = _read_win32_credential(LEGACY_KEYRING_SERVICE, provider)
+
+        legacy_key = (legacy_keyring_val and legacy_keyring_val.strip()) or (legacy_win32_val and legacy_win32_val.strip())
+        if not legacy_key:
             return MigrationResult.NO_LEGACY_KEY
 
         clean = legacy_key.strip()
@@ -274,17 +363,9 @@ def migrate_legacy_credential(provider: str) -> MigrationResult:
         # Step 1: Write to canonical service
         try:
             keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, clean)
-            try:
-                import win32cred
-                win32cred.CredWrite({
-                    'Type': win32cred.CRED_TYPE_GENERIC,
-                    'TargetName': f"{provider}.{CANONICAL_KEYRING_SERVICE}",
-                    'UserName': provider,
-                    'CredentialBlob': clean.encode('utf-16-le'),
-                    'Persist': win32cred.CRED_PERSIST_LOCAL_MACHINE,
-                }, 0)
-            except Exception:
-                pass
+            if sys.platform == "win32":
+                if not _write_win32_credential(CANONICAL_KEYRING_SERVICE, provider, clean):
+                    return MigrationResult.FAILED
         except Exception as e:
             logger.debug("Canonical write failed during migration for %s: %s", provider, type(e).__name__)
             return MigrationResult.FAILED
@@ -292,7 +373,7 @@ def migrate_legacy_credential(provider: str) -> MigrationResult:
         # Step 2: Verify canonical write matches
         try:
             verified = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
-            if not verified or verified.strip() != clean:
+            if not verified and sys.platform == "win32":
                 verified = _read_win32_credential(CANONICAL_KEYRING_SERVICE, provider)
             if not verified or verified.strip() != clean:
                 logger.debug("Canonical verification failed during migration for %s", provider)
@@ -302,24 +383,28 @@ def migrate_legacy_credential(provider: str) -> MigrationResult:
             return MigrationResult.FAILED
 
         # Step 3: Delete legacy only after canonical write has been verified
-        legacy_deleted = True
+        legacy_cleanup_ok = True
         try:
             keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
-            # Verify legacy deletion
+            # Verify legacy deletion from keyring
             try:
                 check_legacy = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
                 if check_legacy is not None:
-                    legacy_deleted = False
+                    legacy_cleanup_ok = False
             except Exception:
                 pass
         except Exception as e:
-            logger.warning("Could not delete legacy key during migration for %s: %s", provider, type(e).__name__)
-            legacy_deleted = False
+            # If entry was only in win32 and not python keyring, delete_password may raise; check if absent
+            try:
+                if keyring.get_password(LEGACY_KEYRING_SERVICE, provider) is not None:
+                    legacy_cleanup_ok = False
+            except Exception:
+                pass
 
         if not _delete_win32_credential(LEGACY_KEYRING_SERVICE, provider):
-            legacy_deleted = False
+            legacy_cleanup_ok = False
 
-        if not legacy_deleted:
+        if not legacy_cleanup_ok:
             logger.warning("Legacy key deletion incomplete for %s", provider)
             return MigrationResult.CLEANUP_INCOMPLETE
 
@@ -344,18 +429,13 @@ def set_keyring_credential(provider: str, secret: str) -> bool:
         if not verified or verified.strip() != clean:
             return False
 
-        # Native OS target sync
-        try:
-            import win32cred
-            win32cred.CredWrite({
-                'Type': win32cred.CRED_TYPE_GENERIC,
-                'TargetName': f"{provider}.{CANONICAL_KEYRING_SERVICE}",
-                'UserName': provider,
-                'CredentialBlob': clean.encode('utf-16-le'),
-                'Persist': win32cred.CRED_PERSIST_LOCAL_MACHINE,
-            }, 0)
-        except Exception:
-            pass
+        # Native OS target sync on Windows for Tauri interop
+        if sys.platform == "win32":
+            if not _write_win32_credential(CANONICAL_KEYRING_SERVICE, provider, clean):
+                return False
+            win_verified = _read_win32_credential(CANONICAL_KEYRING_SERVICE, provider)
+            if win_verified != clean:
+                return False
 
         try:
             keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)

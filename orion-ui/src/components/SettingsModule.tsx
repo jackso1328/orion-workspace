@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useOrionStore } from "../store/useOrionStore";
 import { ORION_MODES, OrionModeId } from "../config/modes";
+import { deriveRuntimeStatus, formatProviderName } from "../utils/runtimeStatus";
 import "./SettingsModule.css";
 
 interface BackendAiStatus {
@@ -259,13 +260,6 @@ export default function SettingsModule() {
     }
   };
 
-  const formatProviderName = (prov?: string): string => {
-    if (!prov) return "Cloud";
-    if (prov === "openai") return "OpenAI";
-    if (prov === "anthropic") return "Anthropic";
-    if (prov === "openrouter") return "OpenRouter";
-    return prov.charAt(0).toUpperCase() + prov.slice(1);
-  };
 
   const handleProviderChange = async (newProv: 'openai' | 'anthropic' | 'openrouter') => {
     await setSelectedCloudProvider(newProv);
@@ -359,49 +353,16 @@ export default function SettingsModule() {
     updatePomodoroSettings({ [field]: value });
   };
 
-  // Truthful runtime readiness helper displayed strictly in the header badge
-  const getRuntimeStatus = (): { label: string; pillClass: string } => {
-    // 1. Backend unavailable or unreachable -> strictly Unavailable
-    if (!backendStatus.backendAvailable) {
-      return { label: "Unavailable", pillClass: "pill-neutral" };
-    }
-    // 2. Active downloads
-    if (isDownloading) {
-      return { 
-        label: `Downloading (${Math.round(aiDownloadProgress.percent || 0)}%)`, 
-        pillClass: "pill-blue" 
-      };
-    }
-    // 3. Paused downloads
-    if (isPaused) {
-      return { 
-        label: `Paused (${Math.round(aiDownloadProgress.percent || 0)}%)`, 
-        pillClass: "pill-amber" 
-      };
-    }
-    // 4. Backend status available and cloud engine selected
-    if (backendStatus.engine === "cloud") {
-      const activeProv = backendStatus.cloudProvider || provider;
-      return { 
-        label: `Cloud active (${formatProviderName(activeProv)})`, 
-        pillClass: "pill-violet" 
-      };
-    }
-    // 5. Backend status available and local engine selected
-    if (backendStatus.engine === "local") {
-      return { 
-        label: "Local ready", 
-        pillClass: "pill-green" 
-      };
-    }
-    // 6. Backend status available with neither usable configuration
-    return { 
-      label: "Not configured", 
-      pillClass: "pill-neutral" 
-    };
-  };
-
-  const runtimeInfo = getRuntimeStatus();
+  // Truthful runtime readiness badge derived via pure shared status helper
+  const runtimeInfo = deriveRuntimeStatus({
+    backendAvailable: backendStatus.backendAvailable,
+    engine: backendStatus.engine,
+    cloudProvider: backendStatus.cloudProvider,
+    selectedProvider: provider,
+    isDownloading,
+    downloadPercent: aiDownloadProgress.percent,
+    isPaused,
+  });
 
   const getAccelerationText = () => {
     if (backendStatus.executionDevice === "detecting") {
