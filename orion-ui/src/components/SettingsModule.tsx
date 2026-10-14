@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { 
   Save, 
   Trash2, 
-  Key, 
   Shield, 
   Download, 
   Cpu, 
@@ -12,15 +11,13 @@ import {
   Play, 
   RefreshCw, 
   AlertTriangle, 
-  CheckCircle2, 
-  HardDrive, 
   ExternalLink, 
   Eye, 
   EyeOff, 
   XCircle,
   Moon,
   Zap,
-  HelpCircle,
+  Info,
   Sliders
 } from "lucide-react";
 import { useOrionStore } from "../store/useOrionStore";
@@ -28,7 +25,7 @@ import { ORION_MODES, OrionModeId } from "../config/modes";
 import "./SettingsModule.css";
 
 interface HardwareStatus {
-  executionDevice: string;
+  executionDevice: "detecting" | "gpu" | "cpu" | "unavailable";
   deviceName: string;
   gpuAccelerated: boolean;
   cpuName: string;
@@ -41,8 +38,8 @@ interface InfoTooltipProps {
 }
 
 /**
- * Lightweight, accessible contextual help popover component.
- * Supports hover, click/touch toggle, keyboard focus, and Escape dismissal.
+ * Accessible contextual help popover component.
+ * Non-clipping, hover/focus/click enabled, Esc dismiss.
  */
 function InfoTooltip({ content, ariaLabel = "More information" }: InfoTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -87,7 +84,7 @@ function InfoTooltip({ content, ariaLabel = "More information" }: InfoTooltipPro
         aria-label={ariaLabel}
         aria-expanded={isVisible}
       >
-        <HelpCircle size={12} />
+        <Info size={12} />
       </button>
 
       {isVisible && (
@@ -99,7 +96,7 @@ function InfoTooltip({ content, ariaLabel = "More information" }: InfoTooltipPro
   );
 }
 
-type SettingsTab = "ai" | "cloud" | "preferences" | "about";
+type SettingsTab = "ai" | "cloud" | "preferences" | "privacy";
 
 export default function SettingsModule() {
   const { 
@@ -110,7 +107,6 @@ export default function SettingsModule() {
     aiEngineStatus,
     aiDownloadProgress,
     aiModelSizeFormatted,
-    aiProvider,
     aiMemoryState,
     setIsAiDownloadModalOpen,
     startAiModelDownload,
@@ -123,7 +119,7 @@ export default function SettingsModule() {
     hibernateLocalModel,
   } = useOrionStore();
 
-  // Active sub-tab state (Linear / Raycast pattern)
+  // Exactly 4 Settings Categories
   const [activeTab, setActiveTab] = useState<SettingsTab>("ai");
 
   // Cloud credential state
@@ -133,19 +129,19 @@ export default function SettingsModule() {
   const [credentialStatus, setCredentialStatus] = useState<"checking" | "configured" | "missing">("checking");
   const [statusMessage, setStatusMessage] = useState("");
   
-  // Local model state & delete confirmation
+  // Local model lifecycle & confirmation
   const [isDeletingModel, setIsDeletingModel] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isCheckingSystem, setIsCheckingSystem] = useState(false);
   const [isHibernating, setIsHibernating] = useState(false);
 
-  // Dynamic hardware metadata
+  // Truthful hardware status initialized to explicit detecting state
   const [hardwareStatus, setHardwareStatus] = useState<HardwareStatus>({
-    executionDevice: "gpu",
-    deviceName: "NVIDIA GeForce RTX 3050 Laptop GPU",
-    gpuAccelerated: true,
-    cpuName: "AMD Ryzen 7 4800H",
-    gpuName: "NVIDIA GeForce RTX 3050 Laptop GPU"
+    executionDevice: "detecting",
+    deviceName: "Detecting...",
+    gpuAccelerated: false,
+    cpuName: "Detecting...",
+    gpuName: "Detecting..."
   });
 
   const isDownloading = aiEngineStatus === "downloading" || aiDownloadProgress.status === "downloading";
@@ -169,16 +165,32 @@ export default function SettingsModule() {
       const res = await fetch("http://localhost:8000/api/ai/status");
       if (res.ok) {
         const data = await res.json();
+        const isGpu = Boolean(data.gpu_accelerated ?? data.gpuAccelerated);
+        const dev = data.execution_device || data.executionDevice || (isGpu ? "gpu" : "cpu");
         setHardwareStatus({
-          executionDevice: data.execution_device || data.executionDevice || "cpu",
-          deviceName: data.device_name || data.deviceName || "Multi-core CPU",
-          gpuAccelerated: Boolean(data.gpu_accelerated ?? data.gpuAccelerated),
-          cpuName: data.hardware?.cpu?.name || "AMD Ryzen 7 4800H",
-          gpuName: data.hardware?.gpu?.name || "NVIDIA Dedicated GPU"
+          executionDevice: dev === "gpu" ? "gpu" : "cpu",
+          deviceName: data.device_name || data.deviceName || (isGpu ? "Dedicated GPU" : "Multi-core CPU"),
+          gpuAccelerated: isGpu,
+          cpuName: data.hardware?.cpu?.name || "Host CPU",
+          gpuName: data.hardware?.gpu?.name || "Dedicated GPU"
         });
+      } else {
+        setHardwareStatus(prev => ({
+          ...prev,
+          executionDevice: "unavailable",
+          deviceName: "Unavailable",
+          cpuName: "Unavailable",
+          gpuName: "Unavailable"
+        }));
       }
     } catch {
-      // Backend offline or starting up
+      setHardwareStatus(prev => ({
+        ...prev,
+        executionDevice: "unavailable",
+        deviceName: "Unavailable",
+        cpuName: "Unavailable",
+        gpuName: "Unavailable"
+      }));
     }
   };
 
@@ -187,8 +199,7 @@ export default function SettingsModule() {
       setCredentialStatus("checking");
       const configured = await invoke<boolean>("check_api_credential", { provider });
       setCredentialStatus(configured ? "configured" : "missing");
-    } catch (error) {
-      console.error("Failed to check credential:", error);
+    } catch {
       setCredentialStatus("missing");
     }
   };
@@ -234,7 +245,7 @@ export default function SettingsModule() {
     try {
       await deleteLocalModel();
       setShowDeleteConfirm(false);
-      setStatusMessage("Local model deleted and disk space freed.");
+      setStatusMessage("Local model deleted and disk space recovered.");
       setTimeout(() => setStatusMessage(""), 4000);
     } catch (error) {
       console.error("Failed to delete model:", error);
@@ -248,7 +259,7 @@ export default function SettingsModule() {
     setIsHibernating(true);
     try {
       await hibernateLocalModel();
-      setStatusMessage("Local model unloaded from RAM (Freed ~2.1 GB).");
+      setStatusMessage("Local model unloaded from RAM.");
       setTimeout(() => setStatusMessage(""), 4000);
     } catch (err) {
       console.error("Failed to hibernate model:", err);
@@ -262,20 +273,67 @@ export default function SettingsModule() {
     updatePomodoroSettings({ [field]: value });
   };
 
+  // Truthful, concise runtime state helper
+  const getRuntimeStatus = (): { label: string; pillClass: string } => {
+    if (isDownloading) {
+      return { 
+        label: `Downloading (${Math.round(aiDownloadProgress.percent || 0)}%)`, 
+        pillClass: "pill-blue" 
+      };
+    }
+    if (isPaused) {
+      return { 
+        label: `Paused (${Math.round(aiDownloadProgress.percent || 0)}%)`, 
+        pillClass: "pill-amber" 
+      };
+    }
+    if (isLocalReady) {
+      return { 
+        label: "Local ready", 
+        pillClass: "pill-green" 
+      };
+    }
+    if (isCloudReady) {
+      return { 
+        label: "Cloud ready", 
+        pillClass: "pill-violet" 
+      };
+    }
+    if (hardwareStatus.executionDevice === "unavailable") {
+      return { 
+        label: "Unavailable", 
+        pillClass: "pill-neutral" 
+      };
+    }
+    return { 
+      label: "Not configured", 
+      pillClass: "pill-neutral" 
+    };
+  };
 
+  const runtimeInfo = getRuntimeStatus();
+
+  const getAccelerationText = () => {
+    if (hardwareStatus.executionDevice === "detecting") {
+      return "Detecting...";
+    }
+    if (hardwareStatus.executionDevice === "unavailable") {
+      return "Unavailable";
+    }
+    if (hardwareStatus.gpuAccelerated) {
+      const cleanGpu = hardwareStatus.gpuName.replace("NVIDIA GeForce ", "");
+      return `CUDA · ${cleanGpu}`;
+    }
+    return `CPU · ${hardwareStatus.cpuName}`;
+  };
 
   return (
     <div className="settings-scroll-container">
       <div className="settings-content">
         
-        {/* --- PAGE HEADER --- */}
+        {/* --- PAGE HEADER: EXACTLY TITLE & SYNC ACTION ONLY --- */}
         <header className="settings-header">
-          <div className="settings-header-left">
-            <h1 className="settings-header-title">Settings</h1>
-            <p className="settings-header-subtitle">
-              Manage your AI runtime, credentials, focus timers, and system preferences.
-            </p>
-          </div>
+          <h1 className="settings-header-title">Settings</h1>
           <button
             onClick={handleSyncAiStatus}
             disabled={isCheckingSystem}
@@ -288,7 +346,7 @@ export default function SettingsModule() {
           </button>
         </header>
 
-        {/* --- LINEAR / RAYCAST STYLE TAB NAVIGATION --- */}
+        {/* --- EXACTLY FOUR SUB-TABS --- */}
         <nav className="settings-nav-tabs" aria-label="Settings Categories">
           <button
             type="button"
@@ -296,15 +354,15 @@ export default function SettingsModule() {
             className={`settings-tab-btn ${activeTab === "ai" ? "active" : ""}`}
           >
             <Cpu size={14} />
-            AI Engine & Models
+            AI
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("cloud")}
             className={`settings-tab-btn ${activeTab === "cloud" ? "active" : ""}`}
           >
-            <Key size={14} />
-            Cloud AI
+            <Cloud size={14} />
+            Cloud
           </button>
           <button
             type="button"
@@ -312,393 +370,334 @@ export default function SettingsModule() {
             className={`settings-tab-btn ${activeTab === "preferences" ? "active" : ""}`}
           >
             <Sliders size={14} />
-            Preferences & Focus
+            Preferences
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("about")}
-            className={`settings-tab-btn ${activeTab === "about" ? "active" : ""}`}
+            onClick={() => setActiveTab("privacy")}
+            className={`settings-tab-btn ${activeTab === "privacy" ? "active" : ""}`}
           >
             <Shield size={14} />
-            About & Privacy
+            Privacy
           </button>
         </nav>
 
         {/* ============================================================
-            TAB 1: AI ENGINE & MODELS
+            TAB 1: AI
             ============================================================ */}
         {activeTab === "ai" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            
-            {/* Active AI Engine Banner */}
-            <div className="settings-runtime-banner">
-              <div className="settings-runtime-left">
-                <div
-                  className={`settings-runtime-icon ${
-                    isCloudReady
-                      ? "ready"
-                      : isLocalReady
-                      ? "local"
-                      : isDownloading
-                      ? "downloading"
-                      : "alert"
-                  }`}
-                >
-                  {isCloudReady ? (
-                    <Cloud size={18} />
-                  ) : isLocalReady ? (
-                    <Cpu size={18} />
-                  ) : isDownloading ? (
-                    <Download size={18} />
-                  ) : isPaused ? (
-                    <Pause size={18} />
-                  ) : (
-                    <AlertTriangle size={18} />
-                  )}
-                </div>
-
-                <div className="settings-runtime-text">
-                  <div className="settings-runtime-title-row">
-                    <span className="settings-runtime-name">
-                      {isCloudReady
-                        ? "Cloud AI Engine Active"
-                        : isLocalReady
-                        ? "Standalone Local AI Active"
-                        : isDownloading
-                        ? `Downloading Orion Brain (${Math.round(aiDownloadProgress.percent || 0)}%)`
-                        : isPaused
-                        ? `Model Download Paused (${Math.round(aiDownloadProgress.percent || 0)}%)`
-                        : "AI Engine Inactive"}
-                    </span>
-                    <span
-                      className={`settings-pill ${
-                        isCloudReady
-                          ? "pill-violet"
-                          : isLocalReady
-                          ? "pill-green"
-                          : isDownloading
-                          ? "pill-blue"
-                          : isPaused
-                          ? "pill-amber"
-                          : "pill-rose"
-                      }`}
-                    >
-                      {isCloudReady
-                        ? (aiProvider === "cloud" ? "Cloud Key Configured" : "Cloud Ready")
-                        : isLocalReady
-                        ? (hardwareStatus.gpuAccelerated ? "Offline • GPU Ready" : "Offline • CPU Ready")
-                        : isDownloading
-                        ? "Downloading"
-                        : isPaused
-                        ? "Paused"
-                        : "Action Required"}
-                    </span>
-                  </div>
-                  <p className="settings-runtime-desc">
-                    {isCloudReady
-                      ? "Inference processed securely via your configured provider in native OS Keychain."
-                      : isLocalReady
-                      ? `Running 100% privately on-device via ${hardwareStatus.deviceName} with zero external network transmission.`
-                      : isDownloading
-                      ? "Retrieving standalone weights. Chunks are safely saved on disk."
-                      : isPaused
-                      ? "Download paused. Resume anytime to complete local setup."
-                      : "No cloud key or local weights detected. Voice input and reasoning are paused."}
-                  </p>
-                </div>
+          <div className="settings-card">
+            <div className="settings-card-header">
+              <div className="settings-card-title-wrap">
+                <Cpu size={15} color="#8B5CF6" />
+                <h2 className="settings-card-title">AI Engine</h2>
               </div>
-
-              {!isLocalReady && !isCloudReady && (
-                <button
-                  className="btn-orion-primary"
-                  onClick={() => setIsAiDownloadModalOpen(true)}
-                >
-                  <Download size={12} /> Activate Orion AI
-                </button>
-              )}
+              <span className={`settings-pill ${runtimeInfo.pillClass}`}>
+                {runtimeInfo.label}
+              </span>
             </div>
 
-            {/* Standalone Local Model Management (Row-Based Standard) */}
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-title-wrap">
-                  <HardDrive size={15} color="#8B5CF6" />
-                  <div>
-                    <h2 className="settings-card-title">Standalone Local Model</h2>
-                    <p className="settings-card-subtitle">In-process llama-cpp weights with zero external prerequisites</p>
-                  </div>
-                </div>
-
-                <span className={`settings-pill ${isModelInstalled ? "pill-green" : "pill-rose"}`}>
-                  {isModelInstalled ? <CheckCircle2 size={11} /> : <HardDrive size={11} />}
-                  {isModelInstalled ? "Installed & Verified" : "Not Installed"}
+            {/* Row 1: Runtime */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Runtime
+                  <InfoTooltip content="Active inference backend handling natural language queries, reasoning, and context analysis." />
                 </span>
               </div>
-
-              {/* Row 1: Model & Quantization */}
-              <div className="settings-row">
-                <div className="settings-row-left">
-                  <span className="settings-row-label">
-                    Model Architecture
-                    <InfoTooltip content="Qwen 2.5 3B Instruct quantized to 4-bit Q4_K_M GGUF. Compresses weights to ~2.1 GB while preserving ~99% reasoning accuracy." />
-                  </span>
-                  <p className="settings-row-desc">Qwen 2.5 3B Instruct • 4-bit Q4_K_M GGUF format</p>
-                </div>
-                <div className="settings-row-right">
-                  <span className="settings-tag-neutral">GGUF Quantized</span>
-                </div>
+              <div className="settings-row-right">
+                <span className={`settings-pill ${runtimeInfo.pillClass}`}>
+                  {runtimeInfo.label}
+                </span>
               </div>
+            </div>
 
-              {/* Row 2: Hardware & Acceleration */}
-              <div className="settings-row">
-                <div className="settings-row-left">
-                  <span className="settings-row-label">
-                    Hardware Acceleration
-                    <InfoTooltip content="Hardware acceleration uses CUDA GPU offloading for low-latency token generation, falling back automatically to multi-core CPU." />
-                  </span>
-                  <p className="settings-row-desc">
-                    {hardwareStatus.gpuAccelerated ? "CUDA offloaded to dedicated GPU" : "Executing on multi-core host CPU"}
-                  </p>
-                </div>
-                <div className="settings-row-right">
-                  <span className="settings-tag-neutral">
-                    {hardwareStatus.gpuAccelerated 
-                      ? hardwareStatus.gpuName.replace('NVIDIA GeForce ', '')
-                      : hardwareStatus.cpuName.split(' ')[0] + ' ' + (hardwareStatus.cpuName.split(' ')[1] || '')}
-                  </span>
-                </div>
+            {/* Row 2: Model */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Model
+                  <InfoTooltip content="Qwen 2.5 3B Instruct quantized to 4-bit Q4_K_M GGUF format for low-latency desktop inference." />
+                </span>
               </div>
-
-              {/* Row 3: Disk & Context */}
-              <div className="settings-row">
-                <div className="settings-row-left">
-                  <span className="settings-row-label">
-                    Memory & Context Footprint
-                    <InfoTooltip content="2048 token optimized working context window allocated for task notes, instructions, and history." />
-                  </span>
-                  <p className="settings-row-desc">Disk footprint and working token window</p>
-                </div>
-                <div className="settings-row-right">
-                  <span className="settings-tag-neutral">{aiModelSizeFormatted || "2.1 GB"} • 2048 Tokens</span>
-                </div>
+              <div className="settings-row-right">
+                <span className="settings-value-text">Qwen 2.5 3B Instruct · Q4_K_M</span>
               </div>
+            </div>
 
-              {/* Row 4: Vector Embeddings & Voice */}
-              <div className="settings-row">
-                <div className="settings-row-left">
-                  <span className="settings-row-label">
-                    Embeddings & Voice Pipeline
-                    <InfoTooltip content="Runs on-device embedding models (BAAI/bge-small) and local speech synthesis (Kokoro TTS + Faster-Whisper) with zero network calls." />
-                  </span>
-                  <p className="settings-row-desc">FastEmbed (bge-small) + Kokoro TTS & Faster-Whisper</p>
-                </div>
-                <div className="settings-row-right">
-                  <span className="settings-tag-neutral">100% On-Device</span>
-                </div>
+            {/* Row 3: Acceleration */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Acceleration
+                  <InfoTooltip content="Hardware device executing neural network layers. Uses CUDA offloading when compatible GPU is detected, with host CPU fallback." />
+                </span>
               </div>
+              <div className="settings-row-right">
+                <span className="settings-tag-neutral">{getAccelerationText()}</span>
+              </div>
+            </div>
 
-              {/* Row 5: RAM Auto-Sleep */}
-              {isModelInstalled && (
-                <div className="settings-row">
-                  <div className="settings-row-left">
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span className="settings-row-label">
-                        RAM Auto-Sleep Policy
-                        <InfoTooltip content="Eco mode auto-unloads the model after 5 minutes of idle time to release ~2.1 GB of RAM back to your system. Always-On keeps it warm in RAM for instantaneous zero-latency responses." />
-                      </span>
-                      <span className={`settings-pill ${aiMemoryState?.isLoaded ? "pill-violet" : "pill-green"}`} style={{ fontSize: "0.68rem", padding: "1px 6px" }}>
-                        {aiMemoryState?.isLoaded ? "Active in RAM (~2.1 GB)" : "Sleeping (0 MB RAM 💤)"}
-                      </span>
-                    </div>
-                    <p className="settings-row-desc">
-                      {aiMemoryState?.isLoaded
-                        ? (aiMemoryState?.memoryMode === "eco"
-                            ? "Model is warm in memory. Auto-sleeps after 5m idle to release ~2.1 GB RAM."
-                            : "Model is permanently loaded in memory for zero-latency responses.")
-                        : "Model is unloaded from memory. Wakes automatically in ~2s on request."}
-                    </p>
+            {/* Row 4: Storage */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Storage
+                  <InfoTooltip content="Local disk allocation for standalone GGUF model weights on your machine." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                <span className="settings-value-text">
+                  {isModelInstalled 
+                    ? `${aiModelSizeFormatted || "2.1 GB"} on disk`
+                    : isDownloading
+                    ? `${(aiDownloadProgress.downloadedBytes / (1024 * 1024 * 1024)).toFixed(1)} / 2.1 GB`
+                    : "2.1 GB download"}
+                </span>
+              </div>
+            </div>
+
+            {/* Row 5: Context */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Context
+                  <InfoTooltip content="Optimized working context token limit allocated for documents, tasks, instructions, and conversation history." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                <span className="settings-value-text">2,048 tokens</span>
+              </div>
+            </div>
+
+            {/* Row 6: Embeddings */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Embeddings
+                  <InfoTooltip content="Local dense vector model (BAAI/bge-small) providing fast semantic search across all personal documents." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                <span className="settings-value-text">FastEmbed (bge-small)</span>
+              </div>
+            </div>
+
+            {/* Row 7: Voice */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Voice
+                  <InfoTooltip content="On-device speech transcription and voice synthesis using Faster-Whisper and Kokoro TTS." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                <span className="settings-value-text">Kokoro TTS · Faster-Whisper</span>
+              </div>
+            </div>
+
+            {/* Row 8: Memory */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Memory
+                  <InfoTooltip content="Eco mode unloads weights from RAM after 5 minutes of idle time. Always-On keeps the model warm for instant responses." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                <span className="settings-value-text" style={{ marginRight: "4px" }}>
+                  {isModelInstalled 
+                    ? (aiMemoryState?.isLoaded ? "Loaded · ~2.1 GB" : "Sleeping · 0 MB")
+                    : "Unloaded · 0 MB"}
+                </span>
+
+                {isModelInstalled && (
+                  <div className="settings-segmented-control" role="group" aria-label="RAM Policy">
+                    <button
+                      type="button"
+                      onClick={() => setAiMemoryMode("eco")}
+                      className={`settings-seg-btn ${(aiMemoryState?.memoryMode ?? "eco") === "eco" ? "active" : ""}`}
+                      title="Auto-unloads model after 5 minutes of inactivity"
+                    >
+                      <Moon size={11} />
+                      Eco
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAiMemoryMode("always_on")}
+                      className={`settings-seg-btn ${aiMemoryState?.memoryMode === "always_on" ? "active" : ""}`}
+                      title="Keeps model loaded in RAM permanently"
+                    >
+                      <Zap size={11} />
+                      Always-On
+                    </button>
                   </div>
+                )}
 
-                  <div className="settings-row-right">
-                    <div className="settings-segmented-control" role="group" aria-label="RAM Auto-Sleep Mode">
-                      <button
-                        type="button"
-                        onClick={() => setAiMemoryMode("eco")}
-                        className={`settings-seg-btn ${(aiMemoryState?.memoryMode ?? "eco") === "eco" ? "active" : ""}`}
-                        title="Auto-unloads model after 5 minutes idle"
-                      >
-                        <Moon size={11} />
-                        Eco (Auto-Sleep)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAiMemoryMode("always_on")}
-                        className={`settings-seg-btn ${aiMemoryState?.memoryMode === "always_on" ? "active" : ""}`}
-                        title="Keeps model loaded in RAM permanently"
-                      >
-                        <Zap size={11} />
-                        Always-On
-                      </button>
-                    </div>
+                {isModelInstalled && aiMemoryState?.isLoaded && (
+                  <button
+                    type="button"
+                    onClick={handleHibernate}
+                    disabled={isHibernating}
+                    className="btn-orion-subtle"
+                    title="Unload model immediately from RAM"
+                  >
+                    <Moon size={11} />
+                    {isHibernating ? "Hibernating..." : "Hibernate Now"}
+                  </button>
+                )}
+              </div>
+            </div>
 
-                    {aiMemoryState?.isLoaded && (
-                      <button
-                        type="button"
-                        onClick={handleHibernate}
-                        disabled={isHibernating}
-                        className="btn-orion-subtle"
-                        title="Unload model immediately and free 2.1 GB RAM"
-                      >
-                        <Moon size={11} />
-                        {isHibernating ? "Hibernating..." : "Hibernate Now"}
+            {/* Row 9: Model Actions */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Actions
+                  <InfoTooltip content="Model lifecycle controls to download, inspect technical specifications, or delete local weights." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                {isDownloading ? (
+                  <>
+                    <button onClick={() => pauseAiModelDownload()} className="btn-orion-secondary">
+                      <Pause size={12} /> Pause
+                    </button>
+                    <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-secondary">
+                      <ExternalLink size={12} /> Metrics
+                    </button>
+                    <button onClick={() => cancelAiModelDownload()} className="btn-orion-danger-subtle">
+                      <XCircle size={12} /> Cancel
+                    </button>
+                  </>
+                ) : isPaused ? (
+                  <>
+                    <button onClick={() => resumeAiModelDownload()} className="btn-orion-primary">
+                      <Play size={12} /> Resume
+                    </button>
+                    <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-secondary">
+                      <ExternalLink size={12} /> Metrics
+                    </button>
+                    <button onClick={() => cancelAiModelDownload()} className="btn-orion-danger-subtle">
+                      <XCircle size={12} /> Cancel
+                    </button>
+                  </>
+                ) : isModelInstalled ? (
+                  <>
+                    <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-secondary">
+                      <ExternalLink size={12} /> Specifications
+                    </button>
+                    {!showDeleteConfirm && (
+                      <button onClick={() => setShowDeleteConfirm(true)} className="btn-orion-danger-subtle">
+                        <Trash2 size={12} /> Delete Model
                       </button>
                     )}
-                  </div>
-                </div>
-              )}
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-primary">
+                      <Download size={12} /> Download Model ({aiModelSizeFormatted || "2.1 GB"})
+                    </button>
+                    <button onClick={() => startAiModelDownload()} className="btn-orion-secondary">
+                      Background
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
 
-              {/* Row 6: Model Maintenance Actions */}
-              <div className="settings-row">
-                <div className="settings-row-left">
-                  <span className="settings-row-label">Model Maintenance & Actions</span>
-                  <p className="settings-row-desc">Inspect specifications or delete weights to recover disk storage</p>
+            {/* Inline Deletion Confirmation */}
+            {showDeleteConfirm && (
+              <div className="settings-inline-alert">
+                <div className="alert-content">
+                  <AlertTriangle size={14} />
+                  <span>Permanently delete local model weights (2.1 GB)? Offline reasoning will be disabled.</span>
                 </div>
-                <div className="settings-row-right">
-                  {isDownloading ? (
-                    <>
-                      <button onClick={() => pauseAiModelDownload()} className="btn-orion-secondary">
-                        <Pause size={12} /> Pause
-                      </button>
-                      <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-secondary">
-                        <ExternalLink size={12} /> Metrics
-                      </button>
-                      <button onClick={() => cancelAiModelDownload()} className="btn-orion-danger-subtle">
-                        <XCircle size={12} /> Cancel
-                      </button>
-                    </>
-                  ) : isPaused ? (
-                    <>
-                      <button onClick={() => resumeAiModelDownload()} className="btn-orion-primary">
-                        <Play size={12} /> Resume
-                      </button>
-                      <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-secondary">
-                        <ExternalLink size={12} /> Metrics
-                      </button>
-                      <button onClick={() => cancelAiModelDownload()} className="btn-orion-danger-subtle">
-                        <XCircle size={12} /> Cancel
-                      </button>
-                    </>
-                  ) : isModelInstalled ? (
-                    <>
-                      <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-secondary">
-                        <ExternalLink size={12} /> Inspect Specs
-                      </button>
-                      {!showDeleteConfirm && (
-                        <button onClick={() => setShowDeleteConfirm(true)} className="btn-orion-danger-subtle">
-                          <Trash2 size={12} /> Delete (Free 2.1 GB)
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={() => setIsAiDownloadModalOpen(true)} className="btn-orion-primary">
-                        <Download size={12} /> Download Model ({aiModelSizeFormatted || "2.1 GB"})
-                      </button>
-                      <button onClick={() => startAiModelDownload()} className="btn-orion-secondary">
-                        Background
-                      </button>
-                    </>
-                  )}
+                <div className="alert-actions">
+                  <button
+                    onClick={handleDeleteModel}
+                    disabled={isDeletingModel}
+                    className="btn-orion-danger-solid"
+                  >
+                    {isDeletingModel ? "Deleting..." : "Confirm Delete"}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeletingModel}
+                    className="btn-orion-secondary"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
+            )}
 
-              {/* Inline Delete Confirmation */}
-              {showDeleteConfirm && (
-                <div className="settings-inline-alert">
-                  <div className="alert-content">
-                    <AlertTriangle size={14} className="alert-icon" />
-                    <span>Permanently delete local model weights (2.1 GB)? Offline reasoning will be disabled.</span>
-                  </div>
-                  <div className="alert-actions">
-                    <button
-                      onClick={handleDeleteModel}
-                      disabled={isDeletingModel}
-                      className="btn-orion-danger-solid"
-                    >
-                      {isDeletingModel ? "Deleting..." : "Confirm Delete"}
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(false)}
-                      disabled={isDeletingModel}
-                      className="btn-orion-secondary"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            {statusMessage && (
+              <div className="settings-feedback-bar">
+                {statusMessage}
+              </div>
+            )}
           </div>
         )}
 
         {/* ============================================================
-            TAB 2: CLOUD AI CONFIGURATION
+            TAB 2: CLOUD
             ============================================================ */}
         {activeTab === "cloud" && (
           <div className="settings-card">
             <div className="settings-card-header">
               <div className="settings-card-title-wrap">
-                <Key size={15} color="#8B5CF6" />
-                <div>
-                  <h2 className="settings-card-title">Cloud AI Credentials</h2>
-                  <p className="settings-card-subtitle">Encrypted in operating system keychain (Windows Credential Manager / macOS Keychain)</p>
-                </div>
+                <Cloud size={15} color="#8B5CF6" />
+                <h2 className="settings-card-title">Cloud AI</h2>
               </div>
-              <InfoTooltip content="API keys are stored encrypted in your operating system's native credential store and are never transmitted to third parties." />
             </div>
 
-            {/* Provider Row */}
+            {/* Row 1: Provider */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">Inference Provider</span>
-                <p className="settings-row-desc">Select the cloud LLM backend for cloud-assisted queries</p>
+                <span className="settings-row-label">
+                  Provider
+                  <InfoTooltip content="Select the cloud inference provider for external LLM API requests." />
+                </span>
               </div>
               <div className="settings-row-right">
                 <select
                   value={provider}
                   onChange={(e) => setProvider(e.target.value)}
                   className="settings-select"
-                  style={{ minWidth: "220px" }}
+                  style={{ minWidth: "160px" }}
                 >
-                  <option value="openai">OpenAI (GPT-4o, GPT-4o-mini)</option>
-                  <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
-                  <option value="openrouter">OpenRouter (Unified API)</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="openrouter">OpenRouter</option>
                 </select>
               </div>
             </div>
 
-            {/* API Key Row */}
+            {/* Row 2: API key */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">API Key Secret</span>
-                <p className="settings-row-desc">Encrypted with OS-level hardware security</p>
+                <span className="settings-row-label">
+                  API key
+                  <InfoTooltip content="Stored encrypted in your operating system credential store (Windows Credential Manager / macOS Keychain). Transmitted directly to provider for API queries." />
+                </span>
               </div>
               <div className="settings-row-right">
-                <div style={{ position: "relative", width: "240px" }}>
+                <div style={{ position: "relative", width: "220px" }}>
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="sk-..."
                     value={credential}
                     onChange={(e) => setCredential(e.target.value)}
                     className="settings-input"
-                    style={{ width: "100%", paddingRight: "30px" }}
+                    style={{ width: "100%", paddingRight: "28px" }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     style={{
                       position: "absolute",
-                      right: "8px",
+                      right: "7px",
                       top: "50%",
                       transform: "translateY(-50%)",
                       background: "transparent",
@@ -719,19 +718,18 @@ export default function SettingsModule() {
                   disabled={!credential.trim()}
                   className="btn-orion-primary"
                 >
-                  <Save size={12} /> Save Key
+                  <Save size={12} /> {credentialStatus === "configured" ? "Update" : "Save"}
                 </button>
               </div>
             </div>
 
-            {/* Keychain Status Row */}
+            {/* Row 3: Status */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Shield size={14} color={credentialStatus === "configured" ? "#059669" : "#64607A"} />
-                  <span className="settings-row-label">Keychain Encryption Status</span>
-                </div>
-                <p className="settings-row-desc">Native Windows Credential Manager encryption state</p>
+                <span className="settings-row-label">
+                  Status
+                  <InfoTooltip content="Status of API credential verification in the native operating system credential store." />
+                </span>
               </div>
               <div className="settings-row-right">
                 <span
@@ -740,14 +738,14 @@ export default function SettingsModule() {
                       ? "pill-green"
                       : credentialStatus === "checking"
                       ? "pill-amber"
-                      : "pill-rose"
+                      : "pill-neutral"
                   }`}
                 >
                   {credentialStatus === "checking"
                     ? "Checking..."
                     : credentialStatus === "configured"
-                    ? "✓ Encrypted in OS Keychain"
-                    : "Not Configured"}
+                    ? "Configured in OS Keychain"
+                    : "Not configured"}
                 </span>
 
                 {credentialStatus === "configured" && (
@@ -755,14 +753,14 @@ export default function SettingsModule() {
                     onClick={handleRemoveCredential}
                     className="btn-orion-danger-subtle"
                   >
-                    <Trash2 size={11} /> Remove Key
+                    <Trash2 size={11} /> Remove
                   </button>
                 )}
               </div>
             </div>
 
             {statusMessage && (
-              <div style={{ padding: "10px 20px", background: "rgba(139, 92, 246, 0.05)", borderTop: "1px solid rgba(139, 92, 246, 0.12)", color: "#8B5CF6", fontSize: "0.8rem", fontWeight: 500 }}>
+              <div className="settings-feedback-bar">
                 {statusMessage}
               </div>
             )}
@@ -770,32 +768,31 @@ export default function SettingsModule() {
         )}
 
         {/* ============================================================
-            TAB 3: PREFERENCES & FOCUS
+            TAB 3: PREFERENCES
             ============================================================ */}
         {activeTab === "preferences" && (
           <div className="settings-card">
             <div className="settings-card-header">
               <div className="settings-card-title-wrap">
                 <Sliders size={15} color="#8B5CF6" />
-                <div>
-                  <h2 className="settings-card-title">Workspace & Focus Preferences</h2>
-                  <p className="settings-card-subtitle">Default context lens and Pomodoro sprint durations</p>
-                </div>
+                <h2 className="settings-card-title">Preferences</h2>
               </div>
             </div>
 
-            {/* Default Mode Row */}
+            {/* Row 1: Workspace mode */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">Default Workspace Lens</span>
-                <p className="settings-row-desc">Primary workflow context loaded upon launching Orion</p>
+                <span className="settings-row-label">
+                  Workspace mode
+                  <InfoTooltip content="Switches active workflow lens and tool suite across Orion modules." />
+                </span>
               </div>
               <div className="settings-row-right">
                 <select
                   value={activeMode}
                   onChange={(e) => setActiveMode(e.target.value as OrionModeId)}
                   className="settings-select"
-                  style={{ minWidth: "180px" }}
+                  style={{ minWidth: "160px" }}
                 >
                   {Object.values(ORION_MODES).map((mode) => (
                     <option key={mode.id} value={mode.id}>
@@ -806,11 +803,13 @@ export default function SettingsModule() {
               </div>
             </div>
 
-            {/* Focus Interval */}
+            {/* Row 2: Focus */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">Pomodoro Focus Interval</span>
-                <p className="settings-row-desc">Standard length of each focused work sprint</p>
+                <span className="settings-row-label">
+                  Focus
+                  <InfoTooltip content="Duration of each dedicated Pomodoro work sprint." />
+                </span>
               </div>
               <div className="settings-row-right">
                 <input
@@ -821,15 +820,17 @@ export default function SettingsModule() {
                   onChange={(e) => updatePomodoro("pomodoro", parseInt(e.target.value) || 25)}
                   className="settings-input settings-input-num"
                 />
-                <span style={{ fontSize: "0.8rem", color: "#64607A" }}>minutes</span>
+                <span className="settings-unit">min</span>
               </div>
             </div>
 
-            {/* Short Break */}
+            {/* Row 3: Short break */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">Short Break Duration</span>
-                <p className="settings-row-desc">Rest interval between consecutive work sprints</p>
+                <span className="settings-row-label">
+                  Short break
+                  <InfoTooltip content="Rest interval between consecutive focus sprints." />
+                </span>
               </div>
               <div className="settings-row-right">
                 <input
@@ -840,15 +841,17 @@ export default function SettingsModule() {
                   onChange={(e) => updatePomodoro("shortBreak", parseInt(e.target.value) || 5)}
                   className="settings-input settings-input-num"
                 />
-                <span style={{ fontSize: "0.8rem", color: "#64607A" }}>minutes</span>
+                <span className="settings-unit">min</span>
               </div>
             </div>
 
-            {/* Long Break */}
+            {/* Row 4: Long break */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">Long Break Duration</span>
-                <p className="settings-row-desc">Extended recovery interval after 4 completed focus sessions</p>
+                <span className="settings-row-label">
+                  Long break
+                  <InfoTooltip content="Extended recovery break after 4 completed focus sprints." />
+                </span>
               </div>
               <div className="settings-row-right">
                 <input
@@ -859,62 +862,73 @@ export default function SettingsModule() {
                   onChange={(e) => updatePomodoro("longBreak", parseInt(e.target.value) || 15)}
                   className="settings-input settings-input-num"
                 />
-                <span style={{ fontSize: "0.8rem", color: "#64607A" }}>minutes</span>
+                <span className="settings-unit">min</span>
               </div>
             </div>
           </div>
         )}
 
         {/* ============================================================
-            TAB 4: ABOUT & PRIVACY
+            TAB 4: PRIVACY
             ============================================================ */}
-        {activeTab === "about" && (
+        {activeTab === "privacy" && (
           <div className="settings-card">
             <div className="settings-card-header">
               <div className="settings-card-title-wrap">
                 <Shield size={15} color="#8B5CF6" />
-                <div>
-                  <h2 className="settings-card-title">Data Storage & Architecture</h2>
-                  <p className="settings-card-subtitle">Zero telemetry and local-first persistence guarantees</p>
-                </div>
-              </div>
-              <InfoTooltip content="All workspaces, documents, notes, flashcards, and local AI reasoning operate strictly on your machine with zero external network transmission." />
-            </div>
-
-            {/* Local Storage Row */}
-            <div className="settings-row">
-              <div className="settings-row-left">
-                <span className="settings-row-label">Local Data Storage</span>
-                <p className="settings-row-desc">
-                  Domain data (Tasks, Flashcards, Syllabus, Whiteboards, Notes, and Timelines) is stored 100% locally on your machine with browser-level database persistence.
-                </p>
-              </div>
-              <div className="settings-row-right">
-                <span className="settings-pill pill-green">100% On-Device</span>
+                <h2 className="settings-card-title">Privacy</h2>
               </div>
             </div>
 
-            {/* Zero-Telemetry Row */}
+            {/* Row 1: Data */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">Zero-Telemetry Guarantee</span>
-                <p className="settings-row-desc">
-                  Orion respects your privacy with strict zero-telemetry guarantees. When operating via the Standalone Local Model, all language inference and vector embeddings run strictly on your machine with no external network requests.
-                </p>
+                <span className="settings-row-label">
+                  Data
+                  <InfoTooltip content="Workspaces, tasks, flashcards, notes, and syllabus data are stored on your local disk with IndexedDB and SQLite." />
+                </span>
               </div>
               <div className="settings-row-right">
-                <span className="settings-pill pill-green">Zero Telemetry</span>
+                <span className="settings-value-text">Local IndexedDB & SQLite</span>
               </div>
             </div>
 
-            {/* Software Version Row */}
+            {/* Row 2: AI processing */}
             <div className="settings-row">
               <div className="settings-row-left">
-                <span className="settings-row-label">ORION Personal OS</span>
-                <p className="settings-row-desc">Autonomous Personal Desktop Operating System</p>
+                <span className="settings-row-label">
+                  AI processing
+                  <InfoTooltip content="Local model processes inference on-device without outbound traffic. When cloud AI is configured, queries are sent via encrypted HTTPS to your selected provider." />
+                </span>
               </div>
               <div className="settings-row-right">
-                <span className="settings-tag-neutral">Version 0.1.0 • Hybrid Architecture</span>
+                <span className="settings-value-text">On-device (local) / Provider API (cloud)</span>
+              </div>
+            </div>
+
+            {/* Row 3: Credentials */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Credentials
+                  <InfoTooltip content="API keys are encrypted and stored in Windows Credential Manager or macOS Keychain." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                <span className="settings-value-text">OS Credential Store</span>
+              </div>
+            </div>
+
+            {/* Row 4: Version */}
+            <div className="settings-row">
+              <div className="settings-row-left">
+                <span className="settings-row-label">
+                  Version
+                  <InfoTooltip content="Installed Orion desktop application release version." />
+                </span>
+              </div>
+              <div className="settings-row-right">
+                <span className="settings-tag-neutral">0.1.0</span>
               </div>
             </div>
           </div>
