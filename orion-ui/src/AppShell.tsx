@@ -4,7 +4,6 @@ import Sidebar from "./components/Sidebar";
 import CommandPalette from "./components/CommandPalette";
 import QuickNotesDock from "./components/QuickNotesDock";
 import ModelDownloadModal from "./components/ModelDownloadModal";
-import PermanentAiStatusBadge from "./components/PermanentAiStatusBadge";
 import { useOrionStore } from "./store/useOrionStore";
 
 export default function AppShell() {
@@ -24,8 +23,6 @@ export default function AppShell() {
       <CommandPalette />
       <main className="pane-workspace">
         <Outlet />
-        {/* Floating fallback badge for small screens / standalone view (hidden on AI route) */}
-        {!isAiRoute && <PermanentAiStatusBadge variant="floating" />}
       </main>
       {/* Global Quick Notes dock — hidden in AI experience */}
       {!isAiRoute && <QuickNotesDock />}

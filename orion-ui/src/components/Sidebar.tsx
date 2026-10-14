@@ -9,7 +9,6 @@ import { Settings, LayoutDashboard, Briefcase, TerminalSquare, Target, Palette, 
 import { useOrionStore } from "../store/useOrionStore";
 import { ORION_MODES } from "../config/modes";
 import ModeSelector from "./ModeSelector";
-import PermanentAiStatusBadge from "./PermanentAiStatusBadge";
 
 const ROUTE_REGISTRY: Array<{path: string, label: string, icon: any, section: 'global' | 'knowledge' | 'system' | 'primary' | 'none'}> = [
   { path: "/inbox", label: "Inbox", icon: Inbox, section: 'global' },
@@ -130,10 +129,6 @@ export default function Sidebar() {
            );
         })}
 
-        {/* Persistent AI Status Badge */}
-        <div className="sidebar-section" style={{ marginTop: 'auto', marginBottom: '0.6rem', padding: '0 4px' }}>
-          <PermanentAiStatusBadge variant="sidebar" />
-        </div>
 
         <div className="sidebar-section bottom" style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>
           <nav className="sidebar-nav">
