@@ -37,6 +37,8 @@ interface BackendAiStatus {
   cpuName: string;
   gpuName: string;
   engine: "local" | "cloud" | "none";
+  cloudProvider?: string;
+  selectedProvider?: string;
 }
 
 interface InfoTooltipProps {
@@ -148,13 +150,15 @@ export default function SettingsModule() {
     checkAiSystemStatus,
     setAiMemoryMode,
     hibernateLocalModel,
+    selectedCloudProvider,
+    setSelectedCloudProvider,
   } = useOrionStore();
 
   // Exactly 4 Settings Categories
   const [activeTab, setActiveTab] = useState<SettingsTab>("ai");
 
-  // Cloud credential state
-  const [provider, setProvider] = useState("openai");
+  // Authoritative cloud credential & provider state
+  const provider = selectedCloudProvider || "openai";
   const [credential, setCredential] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [credentialStatus, setCredentialStatus] = useState<"checking" | "configured" | "missing">("checking");
@@ -189,7 +193,7 @@ export default function SettingsModule() {
   const isCloudReady = aiEngineStatus === "cloud_ready";
 
   useEffect(() => {
-    checkCredentialStatus();
+    checkCredentialStatus(provider);
     fetchHardwareAndStatus();
     const interval = setInterval(() => {
       fetchHardwareAndStatus();
@@ -231,7 +235,9 @@ export default function SettingsModule() {
           gpuAccelerated: isGpu,
           cpuName: data.hardware?.cpu?.name || "Host CPU",
           gpuName: data.hardware?.gpu?.name || "Dedicated GPU",
-          engine: data.engine || (data.model_exists ? "local" : "none")
+          engine: data.engine || (data.model_exists ? "local" : "none"),
+          cloudProvider: data.cloud_provider,
+          selectedProvider: data.selected_provider
         });
       } else {
         setBackendStatus(prev => ({
@@ -255,10 +261,24 @@ export default function SettingsModule() {
     }
   };
 
-  const checkCredentialStatus = async () => {
+  const formatProviderName = (prov?: string): string => {
+    if (!prov) return "Cloud";
+    if (prov === "openai") return "OpenAI";
+    if (prov === "anthropic") return "Anthropic";
+    if (prov === "openrouter") return "OpenRouter";
+    return prov.charAt(0).toUpperCase() + prov.slice(1);
+  };
+
+  const handleProviderChange = async (newProv: 'openai' | 'anthropic' | 'openrouter') => {
+    await setSelectedCloudProvider(newProv);
+    await checkCredentialStatus(newProv);
+    await fetchHardwareAndStatus();
+  };
+
+  const checkCredentialStatus = async (prov = provider) => {
     try {
       setCredentialStatus("checking");
-      const configured = await invoke<boolean>("check_api_credential", { provider });
+      const configured = await invoke<boolean>("check_api_credential", { provider: prov });
       setCredentialStatus(configured ? "configured" : "missing");
     } catch {
       setCredentialStatus("missing");
@@ -270,9 +290,11 @@ export default function SettingsModule() {
     try {
       await invoke("save_api_credential", { provider, secret: credential.trim() });
       setCredential("");
-      setStatusMessage("Credential saved securely to OS Keychain.");
+      await setSelectedCloudProvider(provider);
+      setStatusMessage(`Credential saved securely to OS Keychain for ${formatProviderName(provider)}.`);
       setCredentialStatus("configured");
       await checkAiSystemStatus();
+      await fetchHardwareAndStatus();
       setTimeout(() => setStatusMessage(""), 4000);
     } catch {
       setStatusMessage("Error saving credential.");
@@ -282,9 +304,10 @@ export default function SettingsModule() {
   const handleRemoveCredential = async () => {
     try {
       await invoke("remove_api_credential", { provider });
-      setStatusMessage("Credential removed from OS Keychain.");
+      setStatusMessage(`Credential removed from OS Keychain for ${formatProviderName(provider)}.`);
       setCredentialStatus("missing");
       await checkAiSystemStatus();
+      await fetchHardwareAndStatus();
       setTimeout(() => setStatusMessage(""), 4000);
     } catch {
       setStatusMessage("Error removing credential.");
@@ -294,8 +317,9 @@ export default function SettingsModule() {
   const handleSyncAiStatus = async () => {
     setIsCheckingSystem(true);
     try {
+      await checkAiSystemStatus();
       await fetchHardwareAndStatus();
-      await checkCredentialStatus();
+      await checkCredentialStatus(provider);
     } finally {
       setTimeout(() => setIsCheckingSystem(false), 500);
     }
@@ -338,8 +362,8 @@ export default function SettingsModule() {
   // Truthful runtime readiness helper displayed strictly in the header badge
   const getRuntimeStatus = (): { label: string; pillClass: string } => {
     if (!backendStatus.backendAvailable && backendStatus.executionDevice === "unavailable") {
-      if (isCloudReady) {
-        return { label: "Cloud ready", pillClass: "pill-violet" };
+      if (credentialStatus === "configured") {
+        return { label: `Cloud ready (${formatProviderName(provider)})`, pillClass: "pill-violet" };
       }
       return { label: "Unavailable", pillClass: "pill-neutral" };
     }
@@ -355,16 +379,36 @@ export default function SettingsModule() {
         pillClass: "pill-amber" 
       };
     }
-    if (isLocalReady) {
+    // Single source of truth: backend status response whenever backend is available
+    if (backendStatus.backendAvailable) {
+      if (backendStatus.engine === "cloud") {
+        const activeProv = backendStatus.cloudProvider || provider;
+        return { 
+          label: `Cloud active (${formatProviderName(activeProv)})`, 
+          pillClass: "pill-violet" 
+        };
+      }
+      if (backendStatus.engine === "local") {
+        return { 
+          label: "Local ready", 
+          pillClass: "pill-green" 
+        };
+      }
       return { 
-        label: "Local ready", 
-        pillClass: "pill-green" 
+        label: "Not configured", 
+        pillClass: "pill-neutral" 
       };
     }
     if (isCloudReady) {
       return { 
-        label: "Cloud ready", 
+        label: `Cloud ready (${formatProviderName(provider)})`, 
         pillClass: "pill-violet" 
+      };
+    }
+    if (isLocalReady) {
+      return { 
+        label: "Local ready", 
+        pillClass: "pill-green" 
       };
     }
     return { 
@@ -482,7 +526,9 @@ export default function SettingsModule() {
                 <span className="settings-value-text">{getModelDisplay()}</span>
                 {backendStatus.backendAvailable && (
                   <span className="settings-tag-neutral">
-                    {isModelInstalled ? "Installed" : "Configured"}
+                    {isModelInstalled 
+                      ? (backendStatus.engine === "cloud" ? "Installed (Offline Backup)" : "Installed") 
+                      : "Configured"}
                   </span>
                 )}
               </div>
@@ -732,7 +778,7 @@ export default function SettingsModule() {
               <div className="settings-row-right">
                 <select
                   value={provider}
-                  onChange={(e) => setProvider(e.target.value)}
+                  onChange={(e) => handleProviderChange(e.target.value as 'openai' | 'anthropic' | 'openrouter')}
                   className="settings-select"
                   style={{ minWidth: "160px" }}
                 >
@@ -813,7 +859,9 @@ export default function SettingsModule() {
                   {credentialStatus === "checking"
                     ? "Checking..."
                     : credentialStatus === "configured"
-                    ? "Configured in OS Keychain"
+                    ? (backendStatus.engine === "cloud" && (backendStatus.cloudProvider === provider || (!backendStatus.cloudProvider && provider === selectedCloudProvider))
+                        ? "Active Engine · OS Keychain"
+                        : "Configured in OS Keychain")
                     : "Not configured"}
                 </span>
 

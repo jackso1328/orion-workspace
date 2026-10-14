@@ -67,7 +67,6 @@ export interface Goal {
   deadline?: string;
 }
 
-
 export interface Citation { id: string; title: string; authors: string[]; year: number; url?: string; notes?: string; }
 export interface Hypothesis { id: string; title: string; description: string; status: 'Draft' | 'Testing' | 'Validated' | 'Rejected'; }
 export interface DataLog { id: string; date: string; experiment: string; observations: string; }
@@ -146,7 +145,6 @@ export interface Exam {
   targetScore?: number;
   achievedScore?: number;
 }
-
 
 export type QuestionType = 'multiple-choice' | 'true-false' | 'short-answer';
 
@@ -234,17 +232,16 @@ export interface OrionState {
   flashcardDecks: FlashcardDeck[];
   flashcards: Flashcard[];
   exams: Exam[];
-    citations: Citation[];
-    hypotheses: Hypothesis[];
-    dataLogs: DataLog[];
-    issues: Issue[];
-    lessonPlans: LessonPlan[];
-    students: Student[];
-    communications: Communication[];
-    meetings: Meeting[];
-    timeLogs: TimeLog[];
-    contacts: Contact[];
-
+  citations: Citation[];
+  hypotheses: Hypothesis[];
+  dataLogs: DataLog[];
+  issues: Issue[];
+  lessonPlans: LessonPlan[];
+  students: Student[];
+  communications: Communication[];
+  meetings: Meeting[];
+  timeLogs: TimeLog[];
+  contacts: Contact[];
 
   quizzes: Quiz[];
   addQuiz: (quiz: Omit<Quiz, 'id' | 'attempts'>) => void;
@@ -252,7 +249,6 @@ export interface OrionState {
   deleteQuiz: (id: string) => void;
   recordQuizAttempt: (quizId: string, attempt: QuizAttempt) => void;
 
-  
   // Exam Actions
   addExam: (exam: Omit<Exam, 'id'>) => void;
   updateExam: (id: string, updates: Partial<Exam>) => void;
@@ -291,6 +287,7 @@ export interface OrionState {
   aiDownloadProgress: AiDownloadProgress;
   aiModelSizeFormatted: string;
   aiProvider: 'cloud' | 'local' | 'none';
+  selectedCloudProvider: 'openai' | 'anthropic' | 'openrouter';
   aiMemoryState: AiMemoryState;
 
   setAiEngineStatus: (status: AiEngineStatus) => void;
@@ -303,6 +300,7 @@ export interface OrionState {
   cancelAiModelDownload: () => Promise<void>;
   deleteLocalModel: () => Promise<void>;
   checkAiSystemStatus: () => Promise<void>;
+  setSelectedCloudProvider: (provider: 'openai' | 'anthropic' | 'openrouter') => Promise<void>;
   setAiMemoryMode: (mode: 'eco' | 'always_on') => Promise<void>;
   hibernateLocalModel: () => Promise<void>;
 }
@@ -380,7 +378,6 @@ export const useOrionStore = create<OrionState>()(
         { id: 'card-2', deckId: 'deck-1', front: 'What does useEffect do?', back: 'Lets you perform side effects in function components.', nextReviewDate: new Date(Date.now() - 86400000).toISOString(), interval: 1, easeFactor: 2.5 }
       ],
 
-      
       quizzes: [
         {
           id: 'quiz-1',
@@ -553,7 +550,6 @@ export const useOrionStore = create<OrionState>()(
         return {
           flashcards: state.flashcards.map(card => {
             if (card.id === id) {
-              // SuperMemo-2 algorithm simplified
               let easeFactor = card.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
               if (easeFactor < 1.3) easeFactor = 1.3;
               
@@ -581,7 +577,6 @@ export const useOrionStore = create<OrionState>()(
         pomodoroSettings: { ...state.pomodoroSettings, ...settings }
       })),
 
-              
       addQuiz: (quiz) => set((state) => ({
         quizzes: [...state.quizzes, { ...quiz, id: Math.random().toString(36).substr(2, 9), attempts: [] }]
       })),
@@ -601,26 +596,26 @@ export const useOrionStore = create<OrionState>()(
       })),
 
       addExam: (exam) => set((state) => ({
-          exams: [...state.exams, { ...exam, id: Math.random().toString(36).substr(2, 9) }]
-        })),
-        updateExam: (id, updates) => set((state) => ({
-          exams: state.exams.map(e => e.id === id ? { ...e, ...updates } : e)
-        })),
-        deleteExam: (id) => set((state) => ({
-          exams: state.exams.filter(e => e.id !== id)
-        })),
-        toggleExamTopic: (examId, topicIndex) => set((state) => ({
-          exams: state.exams.map(e => {
-            if (e.id === examId) {
-              const newTopics = [...e.topics];
-              newTopics[topicIndex].completed = !newTopics[topicIndex].completed;
-              return { ...e, topics: newTopics };
-            }
-            return e;
-          })
-        })),
-        
-        addDocument: (docData) => set((state) => ({
+        exams: [...state.exams, { ...exam, id: Math.random().toString(36).substr(2, 9) }]
+      })),
+      updateExam: (id, updates) => set((state) => ({
+        exams: state.exams.map(e => e.id === id ? { ...e, ...updates } : e)
+      })),
+      deleteExam: (id) => set((state) => ({
+        exams: state.exams.filter(e => e.id !== id)
+      })),
+      toggleExamTopic: (examId, topicIndex) => set((state) => ({
+        exams: state.exams.map(e => {
+          if (e.id === examId) {
+            const newTopics = [...e.topics];
+            newTopics[topicIndex].completed = !newTopics[topicIndex].completed;
+            return { ...e, topics: newTopics };
+          }
+          return e;
+        })
+      })),
+      
+      addDocument: (docData) => set((state) => ({
         documents: [
           {
             ...docData,
@@ -668,6 +663,7 @@ export const useOrionStore = create<OrionState>()(
       aiDownloadDeclined: false,
       aiModelSizeFormatted: '2.1 GB',
       aiProvider: 'none',
+      selectedCloudProvider: 'openai',
       aiMemoryState: {
         isLoaded: false,
         memoryMode: 'eco',
@@ -710,6 +706,20 @@ export const useOrionStore = create<OrionState>()(
         };
       }),
 
+      setSelectedCloudProvider: async (provider) => {
+        set({ selectedCloudProvider: provider });
+        try {
+          await fetch('http://localhost:8000/api/ai/provider', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider })
+          });
+        } catch {
+          // Backend offline or starting up
+        }
+        await useOrionStore.getState().checkAiSystemStatus();
+      },
+
       startAiModelDownload: async () => {
         set((s) => ({
           aiEngineStatus: 'downloading',
@@ -740,53 +750,51 @@ export const useOrionStore = create<OrionState>()(
       },
 
       pauseAiModelDownload: async () => {
-        set((s) => ({
-          aiEngineStatus: 'paused',
-          aiDownloadProgress: {
-            ...s.aiDownloadProgress,
-            status: 'paused',
-            speedMbps: 0
-          }
-        }));
-
         try {
           await fetch('http://localhost:8000/api/ai/download/pause', { method: 'POST' });
+          set((s) => ({
+            aiEngineStatus: 'paused',
+            aiDownloadProgress: {
+              ...s.aiDownloadProgress,
+              status: 'paused',
+              speedMbps: 0
+            }
+          }));
         } catch (err) {
           console.warn('Backend pause endpoint error:', err);
         }
       },
 
       resumeAiModelDownload: async () => {
-        set((s) => ({
-          aiEngineStatus: 'downloading',
-          aiDownloadProgress: {
-            ...s.aiDownloadProgress,
-            status: 'downloading'
-          }
-        }));
-
         try {
           await fetch('http://localhost:8000/api/ai/download/resume', { method: 'POST' });
+          set((s) => ({
+            aiEngineStatus: 'downloading',
+            aiDownloadProgress: {
+              ...s.aiDownloadProgress,
+              status: 'downloading'
+            }
+          }));
         } catch (err) {
           console.warn('Backend resume endpoint error:', err);
         }
       },
 
       cancelAiModelDownload: async () => {
-        set((s) => ({
-          aiEngineStatus: s.aiDownloadDeclined ? 'disabled' : 'needs_download',
-          isAiDownloadModalOpen: false,
-          aiDownloadProgress: {
-            ...s.aiDownloadProgress,
-            status: 'idle',
-            downloadedBytes: 0,
-            percent: 0,
-            speedMbps: 0
-          }
-        }));
-
         try {
           await fetch('http://localhost:8000/api/ai/download/cancel', { method: 'POST' });
+          set({
+            aiEngineStatus: 'needs_download',
+            aiDownloadProgress: {
+              status: 'idle',
+              modelName: 'Qwen 2.5 3B Instruct (Q4_K_M)',
+              totalBytes: 2147483648,
+              downloadedBytes: 0,
+              percent: 0,
+              speedMbps: 0,
+              etaSeconds: 0,
+            }
+          });
         } catch (err) {
           console.warn('Backend cancel endpoint error:', err);
         }
@@ -817,14 +825,81 @@ export const useOrionStore = create<OrionState>()(
           }
         });
 
-        // Re-check system status (transitions to cloud_ready or disabled/needs_download)
         await useOrionStore.getState().checkAiSystemStatus();
       },
 
       checkAiSystemStatus: async () => {
-        // Step 1: Check native OS Keychain for configured API credentials
+        // Step 1: Query backend status endpoint (authoritative active engine!)
+        try {
+          const res = await fetch('http://localhost:8000/api/ai/status');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.memory) {
+              set({
+                aiMemoryState: {
+                  isLoaded: Boolean(data.memory.isLoaded ?? data.memory.is_loaded),
+                  memoryMode: data.memory.memoryMode || data.memory.memory_mode || 'eco',
+                  idleSeconds: Number(data.memory.idleSeconds ?? data.memory.idle_seconds ?? 0),
+                  estimatedRamMb: Number(data.memory.estimatedRamMb ?? data.memory.estimated_ram_mb ?? 0),
+                }
+              });
+            }
+
+            if (data.selected_provider && ['openai', 'anthropic', 'openrouter'].includes(data.selected_provider)) {
+              set({ selectedCloudProvider: data.selected_provider });
+            }
+
+            if (data.download_state && data.download_state.status === 'downloading') {
+              set({
+                aiEngineStatus: 'downloading',
+                aiDownloadProgress: data.download_state
+              });
+              return;
+            }
+            if (data.download_state && data.download_state.status === 'paused') {
+              set({
+                aiEngineStatus: 'paused',
+                aiDownloadProgress: data.download_state
+              });
+              return;
+            }
+
+            // Real backend engine is authoritative
+            if (data.engine === 'cloud') {
+              set({
+                aiEngineStatus: 'cloud_ready',
+                aiProvider: 'cloud',
+                isAiDownloadModalOpen: false
+              });
+              return;
+            }
+
+            if (data.engine === 'local' && data.model_exists) {
+              set({
+                aiEngineStatus: 'local_ready',
+                aiProvider: 'local',
+                aiModelSizeFormatted: data.model_size_formatted || '2.1 GB',
+                isAiDownloadModalOpen: false
+              });
+              return;
+            }
+
+            // Backend reachable, but no cloud key and no local model
+            set((state) => ({
+              aiEngineStatus: state.aiDownloadDeclined ? 'disabled' : 'needs_download',
+              aiProvider: 'none',
+              isAiDownloadModalOpen: false
+            }));
+            return;
+          }
+        } catch {
+          // Backend offline or starting up
+        }
+
+        // Step 2: Fallback when backend is offline — check native OS Keychain via Tauri
         let hasCloudKey = false;
-        const providers = ['openai', 'anthropic', 'openrouter'];
+        const currentSelected = useOrionStore.getState().selectedCloudProvider || 'openai';
+        const providers = [currentSelected, 'openai', 'anthropic', 'openrouter'];
         for (const prov of providers) {
           try {
             const configured = await invoke<boolean>('check_api_credential', { provider: prov });
@@ -846,64 +921,11 @@ export const useOrionStore = create<OrionState>()(
           return;
         }
 
-        // Step 2: Check backend for local model presence
-        try {
-          const res = await fetch('http://localhost:8000/api/ai/status');
-          if (res.ok) {
-            const data = await res.json();
-            if (data.memory) {
-              set({
-                aiMemoryState: {
-                  isLoaded: Boolean(data.memory.isLoaded),
-                  memoryMode: data.memory.memoryMode || 'eco',
-                  idleSeconds: Number(data.memory.idleSeconds || 0),
-                  estimatedRamMb: Number(data.memory.estimatedRamMb || 0),
-                }
-              });
-            }
-            if (data.model_exists) {
-              set({
-                aiEngineStatus: 'local_ready',
-                aiProvider: 'local',
-                aiModelSizeFormatted: data.model_size_formatted || '2.1 GB',
-                isAiDownloadModalOpen: false
-              });
-              return;
-            }
-            if (data.download_state && data.download_state.status === 'downloading') {
-              set({
-                aiEngineStatus: 'downloading',
-                aiDownloadProgress: data.download_state
-              });
-              return;
-            }
-            if (data.download_state && data.download_state.status === 'paused') {
-              set({
-                aiEngineStatus: 'paused',
-                aiDownloadProgress: data.download_state
-              });
-              return;
-            }
-          }
-        } catch {
-          // Backend offline or starting up
-        }
-
-        // Step 3: No API key & No local model
-        set((state) => {
-          if (state.aiDownloadDeclined) {
-            return {
-              aiEngineStatus: 'disabled',
-              aiProvider: 'none',
-              isAiDownloadModalOpen: false
-            };
-          }
-          return {
-            aiEngineStatus: 'needs_download',
-            aiProvider: 'none',
-            isAiDownloadModalOpen: true
-          };
-        });
+        set((state) => ({
+          aiEngineStatus: state.aiDownloadDeclined ? 'disabled' : 'needs_download',
+          aiProvider: 'none',
+          isAiDownloadModalOpen: false
+        }));
       },
 
       setAiMemoryMode: async (mode: 'eco' | 'always_on') => {

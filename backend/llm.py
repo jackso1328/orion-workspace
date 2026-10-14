@@ -17,6 +17,7 @@ import time
 import json
 import logging
 import threading
+from pathlib import Path
 from typing import Optional, Tuple, Dict, Any
 
 from openai import AsyncOpenAI
@@ -29,6 +30,66 @@ except ImportError:
     from hardware_detector import detect_hardware
 
 logger = logging.getLogger("orion.llm")
+
+# Canonical and backward-compatible legacy OS Keyring service identifiers
+CANONICAL_KEYRING_SERVICE = "orion_app"
+LEGACY_KEYRING_SERVICE = "orion_ai"
+SUPPORTED_PROVIDERS = ["openai", "anthropic", "openrouter"]
+
+CONFIG_FILE_PATH = Path("C:/Users/proud/ORION/data/ai_settings.json")
+
+# In-memory cached selected provider
+_selected_provider: str = "openai"
+
+
+def load_selected_provider() -> str:
+    """Load persisted cloud provider preference from disk, defaulting to 'openai'."""
+    global _selected_provider
+    try:
+        if CONFIG_FILE_PATH.exists():
+            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                prov = data.get("selected_provider", "").strip().lower()
+                if prov in SUPPORTED_PROVIDERS:
+                    _selected_provider = prov
+                    return _selected_provider
+    except Exception as e:
+        logger.debug("Could not read ai_settings.json: %s", e)
+    _selected_provider = "openai"
+    return _selected_provider
+
+
+def set_selected_provider(prov: str) -> str:
+    """Persist and update the active cloud provider selection."""
+    global _selected_provider
+    prov_clean = prov.strip().lower()
+    if prov_clean in SUPPORTED_PROVIDERS:
+        _selected_provider = prov_clean
+        try:
+            CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            existing_data = {}
+            if CONFIG_FILE_PATH.exists():
+                try:
+                    with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+                        existing_data = json.load(f)
+                except Exception:
+                    pass
+            existing_data["selected_provider"] = _selected_provider
+            with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
+                json.dump(existing_data, f, indent=2)
+        except Exception as e:
+            logger.warning("Could not persist selected provider: %s", e)
+    return _selected_provider
+
+
+def get_selected_provider() -> str:
+    """Retrieve the currently authoritative cloud provider selection."""
+    global _selected_provider
+    return _selected_provider
+
+
+# Initialize on module import
+load_selected_provider()
 
 # Lazy-loaded in-process Llama instance & lifecycle state
 _local_llama = None
@@ -46,38 +107,90 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 
-def get_cloud_credentials() -> Tuple[Optional[str], Optional[str]]:
+def get_keyring_credential(provider: str) -> Optional[str]:
     """
-    Detect configured cloud credentials.
-    Checks environment variables first, then OS Keychain (keyring) if available.
-    Returns (provider, api_key) or (None, None).
+    Safely retrieve API credential for provider from OS Keyring.
+    Checks canonical service ('orion_app') first, then legacy service ('orion_ai').
+    Automatically and non-destructively migrates legacy entry to canonical service.
+    Never logs or exposes the credential value.
     """
-    # 1. Environment variables
-    for prov, env_var in [
-        ("openai", "OPENAI_API_KEY"),
-        ("anthropic", "ANTHROPIC_API_KEY"),
-        ("openrouter", "OPENROUTER_API_KEY"),
-    ]:
-        key = os.getenv(env_var)
-        if key and key.strip():
-            return prov, key.strip()
-
-    # 2. Keyring (Windows Credential Manager / OS Keychain)
     try:
         import keyring
-        for prov in ["openai", "anthropic", "openrouter"]:
-            key = keyring.get_password("orion_ai", prov)
+        # 1. Canonical service lookup
+        try:
+            key = keyring.get_password(CANONICAL_KEYRING_SERVICE, provider)
             if key and key.strip():
-                return prov, key.strip()
+                return key.strip()
+        except Exception as e:
+            logger.debug("Canonical keyring lookup failed for %s: %s", provider, type(e).__name__)
+
+        # 2. Legacy service fallback + non-destructive migration
+        try:
+            legacy_key = keyring.get_password(LEGACY_KEYRING_SERVICE, provider)
+            if legacy_key and legacy_key.strip():
+                try:
+                    keyring.set_password(CANONICAL_KEYRING_SERVICE, provider, legacy_key.strip())
+                    keyring.delete_password(LEGACY_KEYRING_SERVICE, provider)
+                except Exception as mig_err:
+                    logger.debug("Keyring migration notice: %s", type(mig_err).__name__)
+                return legacy_key.strip()
+        except Exception as e:
+            logger.debug("Legacy keyring lookup failed for %s: %s", provider, type(e).__name__)
     except Exception as e:
-        logger.debug("Keyring access not available: %s", e)
+        logger.debug("Keyring access unavailable: %s", type(e).__name__)
+    return None
+
+
+def get_cloud_credentials(target_provider: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Detect configured cloud credentials following strict precedence:
+    1. Selected Provider (target_provider or persisted user selection in Settings):
+       a. Environment variable (e.g. OPENAI_API_KEY)
+       b. Canonical OS Keyring ('orion_app')
+       c. Legacy OS Keyring ('orion_ai') with auto-migration
+    2. Fallback Providers (in order: openai -> anthropic -> openrouter):
+       a. Environment variable
+       b. Canonical OS Keyring
+       c. Legacy OS Keyring with auto-migration
+    Returns (provider, api_key) or (None, None). Never logs secret keys.
+    """
+    selected = (target_provider or get_selected_provider() or "openai").strip().lower()
+    if selected not in SUPPORTED_PROVIDERS:
+        selected = "openai"
+
+    env_map = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+    }
+
+    # Priority 1: Check selected provider first (authoritative!)
+    env_val = os.getenv(env_map.get(selected, ""))
+    if env_val and env_val.strip():
+        return selected, env_val.strip()
+
+    keyring_val = get_keyring_credential(selected)
+    if keyring_val and keyring_val.strip():
+        return selected, keyring_val.strip()
+
+    # Priority 2: Fallback to remaining configured providers if selected has no key
+    for prov in SUPPORTED_PROVIDERS:
+        if prov == selected:
+            continue
+        env_val = os.getenv(env_map.get(prov, ""))
+        if env_val and env_val.strip():
+            return prov, env_val.strip()
+
+        keyring_val = get_keyring_credential(prov)
+        if keyring_val and keyring_val.strip():
+            return prov, keyring_val.strip()
 
     return None, None
 
 
 def get_active_engine_info() -> dict:
     """Returns active inference engine and provider for UI badges and diagnostics."""
-    prov, key = get_cloud_credentials()
+    prov, key = get_cloud_credentials(get_selected_provider())
     if prov and key:
         return {
             "engine": "cloud",
@@ -288,7 +401,7 @@ async def generate_response(
     active_key = api_key
 
     if not active_key:
-        active_prov, active_key = get_cloud_credentials()
+        active_prov, active_key = get_cloud_credentials(provider or get_selected_provider())
 
     # --- Engine A: Cloud API ---
     if active_key and active_prov:

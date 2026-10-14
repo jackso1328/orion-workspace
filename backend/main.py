@@ -22,7 +22,8 @@ logger = logging.getLogger("orion.backend")
 try:
     from backend.llm import (
         generate_response, get_cloud_credentials, get_active_engine_info,
-        get_memory_status, hibernate_local_model, set_memory_mode
+        get_memory_status, hibernate_local_model, set_memory_mode,
+        get_selected_provider, set_selected_provider
     )
     from backend.model_manager import model_manager
     from backend.hardware_detector import detect_hardware
@@ -31,7 +32,8 @@ try:
 except ImportError:
     from llm import (
         generate_response, get_cloud_credentials, get_active_engine_info,
-        get_memory_status, hibernate_local_model, set_memory_mode
+        get_memory_status, hibernate_local_model, set_memory_mode,
+        get_selected_provider, set_selected_provider
     )
     from model_manager import model_manager
     from hardware_detector import detect_hardware
@@ -59,11 +61,21 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 def get_full_ai_status() -> dict:
     """Build the comprehensive AI status payload for REST and WebSocket."""
     base_status = model_manager.get_status()
-    cloud_prov, _ = get_cloud_credentials()
+    selected_prov = get_selected_provider()
+    cloud_prov, _ = get_cloud_credentials(selected_prov)
+
+    base_status["selected_provider"] = selected_prov
+    base_status["selectedProvider"] = selected_prov
+
     if cloud_prov:
         base_status["engine"] = "cloud"
         base_status["cloud_provider"] = cloud_prov
         base_status["cloudProvider"] = cloud_prov
+    else:
+        base_status["engine"] = "local" if model_manager.model_exists else "none"
+        base_status["cloud_provider"] = None
+        base_status["cloudProvider"] = None
+
     base_status["memory"] = get_memory_status()
     return base_status
 
@@ -114,9 +126,9 @@ async def trigger_transcribe(file: UploadFile = File(...)):
 
 class ChatRequest(BaseModel):
     message: str
+    state_snapshot: Optional[Dict[str, Any]] = None
     api_key: Optional[str] = None
     provider: Optional[str] = None
-    state_snapshot: Optional[Dict[str, Any]] = None
     conversation_history: Optional[List[Dict[str, str]]] = None
 
 
@@ -179,6 +191,23 @@ def trigger_speak(request: SpeakRequest):
 def get_ai_status():
     """Returns runtime engine status, model presence, download state, and hardware profile."""
     return get_full_ai_status()
+
+
+class ProviderRequest(BaseModel):
+    provider: str
+
+
+@app.get("/api/ai/provider")
+def get_ai_provider():
+    """Returns the currently active cloud provider preference."""
+    return {"provider": get_selected_provider()}
+
+
+@app.post("/api/ai/provider")
+def update_ai_provider(request: ProviderRequest):
+    """Sets the active cloud provider preference."""
+    updated = set_selected_provider(request.provider)
+    return {"status": "ok", "provider": updated}
 
 
 @app.post("/api/ai/download/start")
